@@ -9,4 +9,7 @@ urlpatterns=[
     path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('register/',views.register,name="register"),
+    path('addskills/',views.add_skills,name="addskills"),
+    path('addeducation/',views.add_education,name="addeducation"),
+    path('addcareergoal/',views.add_carrer_goal,name="addcareergoal"),
 ]

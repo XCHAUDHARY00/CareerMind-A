@@ -19,24 +19,24 @@ Here is the step-by-step master plan for building CreateMind AI to a production-
 - [x] PUT/PATCH API (Update a profile)
 - [x] DELETE API (Delete a profile)
 
-## Phase 3: User Authentication
-- [ ] Django User Model basics
-- [ ] JWT Authentication (Access & Refresh tokens)
-- [ ] Registration API
-- [ ] Login API
-- [ ] Protected Routes (Authentication required)
+## Phase 3: User Authentication (✅ DONE)
+- [x] Django User Model basics
+- [x] JWT Authentication (Access & Refresh tokens)
+- [x] Registration API
+- [x] Login API
+- [x] Protected Routes (Authentication required)
 
 ## Phase 4: Career & Progress APIs
-- [ ] Advanced Database Relationships (OneToMany, ManyToMany)
-- [ ] Skills & Education Models
-- [ ] Career Goals Model
-- [ ] API Endpoints for Career details
+- [x] Advanced Database Relationships (OneToMany, ManyToMany)
+- [x] Skills & Education Models
+- [x] Career Goals Model
+- [x] API Endpoints for Career details
 
 ## Phase 5: React Frontend Foundation
-- [ ] React Setup with Vite
-- [ ] Tailwind CSS configuration
-- [ ] Routing (React Router)
-- [ ] Components, Props, and State basics
+- [x] React Setup with Vite
+- [x] Tailwind CSS configuration
+- [x] Routing (React Router)
+- [x] Components, Props, and State basics
 
 ## Phase 6: Frontend & Backend Integration
 - [ ] Axios/Fetch basics

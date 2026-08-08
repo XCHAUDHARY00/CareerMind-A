@@ -1,8 +1,11 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import UserProfileSerializer,UserRegistrationSerializer
-from .models import UserProfile
+from .serializers import (
+    UserProfileSerializer, UserRegistrationSerializer, 
+    SkillSerializer, EducationSerializer, CareerGoalSerializer
+)
+from .models import UserProfile, Skill, Education, CareerGoal
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
@@ -92,6 +95,72 @@ def register(request):
             "message":"user creation failed",
             "data":serializer.errors
         },status=status.HTTP_400_BAD_REQUEST)
-        
-    
-    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_skills(request):
+    serializer=SkillSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "status":"success",
+            "message":"skills added successfully",
+            "data":serializer.data
+        },status=status.HTTP_201_CREATED)
+    else:
+        return Response({
+            "status":"error",
+            "message":"skills addition failed",
+            "data":serializer.errors
+        },status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_education(request):
+    try:
+        user_profile = request.user.profile 
+    except UserProfile.DoesNotExist:
+        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data.copy()
+    data['user_profile'] = user_profile.id
+
+    serializer=EducationSerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "status":"success",
+            "message":"education added successfully",
+            "data":serializer.data
+        },status=status.HTTP_201_CREATED)
+    else:
+        return Response({
+            "status":"error",
+            "message":"education addition failed",
+            "data":serializer.errors
+        },status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_carrer_goal(request):
+    try:
+        user_profile = request.user.profile 
+    except UserProfile.DoesNotExist:
+        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data.copy()
+    data['user_profile'] = user_profile.id
+
+    serializer=CareerGoalSerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "status":"success",
+            "message":"carrer goal added successfully",
+            "data":serializer.data
+        },status=status.HTTP_201_CREATED)
+    else:
+        return Response({
+            "status":"error",
+            "message":"carrer goal addition failed",
+            "data":serializer.errors
+        },status=status.HTTP_400_BAD_REQUEST)

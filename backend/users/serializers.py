@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UserProfile
+from .models import UserProfile, Skill, Education, CareerGoal
 
 from django.contrib.auth.models import User
 
@@ -24,3 +24,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
         return user
+class SkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Skill
+        fields='__all__'
+class EducationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Education
+        fields='__all__'
+class CareerGoalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=CareerGoal
+        fields='__all__'
+
+    
