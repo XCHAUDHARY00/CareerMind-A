@@ -1,12 +1,24 @@
 from rest_framework import serializers
-from .models import UserProfile, Skill, Education, CareerGoal
+from .models import UserProfile,Skill,Education,CareerGoal
 
 from django.contrib.auth.models import User
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    user_educations = serializers.SerializerMethodField()
+    user_career_goals = serializers.SerializerMethodField()
+
     class Meta:
         model = UserProfile
-        fields = '__all__' # Iska matlab saare columns translate kar do
+        fields = ['id', 'user', 'experience', 'bio', 'skills', 'user_educations', 'user_career_goals'] 
+        depth = 1
+
+    def get_user_educations(self, obj):
+        from .models import Education
+        return EducationSerializer(obj.user_educations.all(), many=True).data
+
+    def get_user_career_goals(self, obj):
+        from .models import CareerGoal
+        return CareerGoalSerializer(obj.user_career_goals.all(), many=True).data
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     # Password sirf write-only hona chahiye, API response mein kabhi wapas nahi dikhna chahiye

@@ -86,3 +86,40 @@ Isliye humein Login/Validation ka code scratch se likhne ki zaroorat nahi padti!
 - [x] Configure JWT in `settings.py`
 - [x] Understand the magic of TokenObtainPairView
 - [x] Test Token generation API in Postman
+
+---
+
+## 🎤 TOP 10 INTERVIEW QUESTIONS (JWT & Authentication)
+
+**Q1. Authentication aur Authorization me exact difference kya hai?**
+**Ans:** Authentication ka matlab hai user ki identity verify karna (E.g. Username/Password check karna ki tum wahi ho jo bol rahe ho). Authorization ka matlab hai permissions check karna (E.g. Kya is user ko ye specific API ya data access karne ka haq hai?).
+
+**Q2. Session-based authentication aur Token-based authentication (JWT) me kya farq hai?**
+**Ans:** Session-based authentication me backend (server) user ka session data memory ya database me store karta hai aur frontend ko ek Session ID deta hai (cookies me). Backend ko bar-bar DB hit karna padta hai. JWT stateless hota hai; isme server koi session store nahi karta, saari information token me encrypted form me hoti hai, jisse server ka load kam hota hai aur scaling aasan hoti hai.
+
+**Q3. JWT ke 3 main parts kaunse hote hain?**
+**Ans:** 
+1. **Header:** Algorithm aur token type ki jankari (E.g. HS256).
+2. **Payload:** Asli data jise claims bolte hain (E.g. User ID, Token Expiry).
+3. **Signature:** Ye Header aur Payload ko secret key se hash karke banta hai, taaki token temper (change) na ho sake.
+
+**Q4. Access Token aur Refresh Token do alag-alag token kyu use kiye jate hain?**
+**Ans:** Security ke liye. Access Token ki life short (e.g., 5 mins) rakhte hain taaki agar token chori bhi ho jaye toh hacker use zyada der access na kar paye. Refresh Token ki life lambi hoti hai aur ye sirf naya Access Token fetch karne ke kaam aata hai. Isse baar-baar login karne ka hassle bhi bachta hai aur security bhi maintain rehti hai.
+
+**Q5. Agar ek baar JWT token issue ho gaya aur user immediately password change kar le, toh purana token valid rahega ya nahi?**
+**Ans:** By default JWT stateless hai, isliye agar expiration time bacha hai toh purana token **valid rahega**. Isko mitigate karne ke liye backend me hum ek "Token Blacklist" ya database flag use karte hain jisse password change hone par saare purane tokens invalid (blacklist) kar diye jate hain.
+
+**Q6. TokenObtainPairView Django/SimpleJWT me kya karta hai?**
+**Ans:** Ye ek in-built API view hai jisko username/email aur password bhejne par ye user ko authenticate karta hai aur response me valid Access Token aur Refresh Token ka pair bana kar return karta hai. Hum isme custom claims (e.g. user ki email ya role) bhi add kar sakte hain.
+
+**Q7. IsAuthenticated permission class DRF me kya role play karti hai?**
+**Ans:** `@permission_classes([IsAuthenticated])` lagane se DRF us API endpoint par tab tak access allow nahi karta jab tak request ke header me ek valid (un-expired) authentication token (e.g. JWT) na ho. Agar token missing ya galat hai, toh ye automatically `401 Unauthorized` throw kar deta hai.
+
+**Q8. JWT token ko modify karne se kya hoga?**
+**Ans:** Agar koi (hacker/user) base64 decoded payload me data change (e.g. `user_id = 1` se `user_id = 2`) karne ki koshish karta hai, toh uski Signature invalid ho jayegi kyunki original Signature server ki private secret key se bani thi. Server token ko dekhte hi turant reject (401 Unauthorized) kar dega.
+
+**Q9. Kya JWT ke payload me sensitive data (jaise Password ya Credit Card) rakhna chahiye?**
+**Ans:** Bilkul NAHI! JWT ka payload bas base64 se encoded hota hai (encrypted nahi hota). Iska matlab koi bhi us token ko decode karke payload padh sakta hai. Isliye isme sirf Public / Non-sensitive information (Jaise user id, role) hi rakhni chahiye.
+
+**Q10. Frontend me JWT token ko kahan store karna sabse secure maana jata hai?**
+**Ans:** Commonly LocalStorage ya SessionStorage me store karte hain. Lekin XSS (Cross-Site Scripting) attacks se bachne ke liye sabse secure tareeka ise **HttpOnly Cookies** me store karna maana jata hai, kyunki JavaScript un cookies ko read/access nahi kar sakti.

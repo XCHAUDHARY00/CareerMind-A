@@ -39,11 +39,11 @@ Here is the step-by-step master plan for building CreateMind AI to a production-
 - [x] Components, Props, and State basics
 
 ## Phase 6: Frontend & Backend Integration
-- [ ] Axios/Fetch basics
-- [ ] Login/Register UI
-- [ ] Dashboard & Profile UI
-- [ ] Handling JWT on Frontend
-- [ ] Loading & Error States
+- [x] Axios/Fetch basics
+- [x] Login/Register UI
+- [x] Dashboard & Profile UI (Data Fetching & Premium UI Completed)
+- [x] Handling JWT on Frontend
+- [x] Loading & Error States
 
 ## Phase 7: Basic AI Integration (The Core Magic)
 - [ ] Service Layer Architecture in Django
