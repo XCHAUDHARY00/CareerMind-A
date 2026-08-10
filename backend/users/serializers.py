@@ -44,9 +44,19 @@ class EducationSerializer(serializers.ModelSerializer):
     class Meta:
         model=Education
         fields='__all__'
+        read_only_fields = ['user_profile']
 class CareerGoalSerializer(serializers.ModelSerializer):
     class Meta:
         model=CareerGoal
         fields='__all__'
+        read_only_fields = ['user_profile']
+
+from .models import ChatMessage
+
+class ChatMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatMessage
+        fields = ['id', 'sender', 'message', 'timestamp']
+        
 
     

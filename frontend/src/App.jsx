@@ -4,6 +4,7 @@ import Login from './pages/login';
 import Register from './pages/register';
 import Dashboard from './pages/dashboard';
 import Roadmap from './pages/roadmap';
+import Chat from './pages/chat';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -29,6 +30,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Roadmap />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/chat" 
+          element={
+            <ProtectedRoute>
+              <Chat />
             </ProtectedRoute>
           } 
         />

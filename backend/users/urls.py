@@ -18,4 +18,6 @@ urlpatterns=[
     path('education/<int:pk>/', views.manage_education, name="manageeducation"),
     path('careergoal/<int:pk>/', views.manage_career_goal, name="managecareergoal"),
     path('roadmap/', views.generate_roadmap, name="roadmap"),
+    path('chat/send/', views.send_chat_message, name="sendchat"),
+    path('chat/history/', views.get_chat_history, name="chathistory"),
 ]

@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import UserProfileSerializer,UserRegistrationSerializer,SkillSerializer,EducationSerializer,CareerGoalSerializer
-from .models import UserProfile,Skill,Education,CareerGoal
+from .serializers import UserProfileSerializer,UserRegistrationSerializer,SkillSerializer,EducationSerializer,CareerGoalSerializer,ChatMessageSerializer
+from .models import UserProfile,Skill,Education,CareerGoal,ChatMessage
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
@@ -228,3 +228,50 @@ def manage_career_goal(request, pk):
             serializer.save()
             return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
         return Response({"status": "error", "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_chat_message(request):
+    """
+    User naya message bhejega, hum AI se reply mangwayenge aur response denge.
+    """
+    message = request.data.get("message")
+    if not message:
+        return Response({"status": "error", "message": "Message is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        from .service import interact_with_career_coach
+        profile = request.user.profile
+        ai_data = interact_with_career_coach(profile, message)
+        
+        if "error" in ai_data:
+            return Response({"status": "error", "message": ai_data["error"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        return Response({
+            "status": "success",
+            "message": "Response received",
+            "data": {
+                "response": ai_data["response"]
+            }
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chat_history(request):
+    """
+    User ki purani chat history return karega.
+    """
+    try:
+        profile = request.user.profile
+        messages = ChatMessage.objects.filter(user_profile=profile).order_by('timestamp')
+        serializer = ChatMessageSerializer(messages, many=True)
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

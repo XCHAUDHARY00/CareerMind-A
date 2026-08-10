@@ -8,7 +8,7 @@ print("Key found:", api_key is not None)
 if api_key:
     genai.configure(api_key=api_key)
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash-preview')
         response = model.generate_content("Hello")
         print("Success:", response.text)
     except Exception as e:

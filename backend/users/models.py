@@ -57,3 +57,20 @@ class CareerGoal(models.Model):
 
     def __str__(self):
         return self.title
+class ChatMessage(models.Model):
+    SENDER_CHOICES = [
+        ('user', 'User'),
+        ('ai', 'AI'),
+    ]
+    
+    user_profile = models.ForeignKey(
+        UserProfile, 
+        on_delete=models.CASCADE, 
+        related_name="chat_messages"
+    )
+    sender = models.CharField(max_length=10, choices=SENDER_CHOICES)
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sender}: {self.message[:30]}..."

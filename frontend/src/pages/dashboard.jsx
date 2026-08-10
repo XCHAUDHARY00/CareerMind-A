@@ -203,6 +203,12 @@ const Dashboard = () => {
                     </div>
                     <div className="mt-4 md:mt-0 flex gap-4">
                         <button 
+                            onClick={() => navigate('/chat')}
+                            className="bg-gradient-to-r from-purple-500 to-indigo-650 hover:from-purple-600 hover:to-indigo-705 text-white font-bold py-2 px-6 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(124,58,237,0.3)] hover:shadow-[0_0_25px_rgba(124,58,237,0.5)] flex items-center gap-1.5"
+                        >
+                            💬 AI Career Coach
+                        </button>
+                        <button 
                             onClick={() => navigate('/roadmap')}
                             className="bg-gradient-to-r from-teal-400 to-emerald-500 hover:from-teal-500 hover:to-emerald-600 text-white font-bold py-2 px-6 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(20,184,166,0.3)] hover:shadow-[0_0_25px_rgba(20,184,166,0.5)]"
                         >
