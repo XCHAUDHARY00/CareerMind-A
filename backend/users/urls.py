@@ -20,4 +20,6 @@ urlpatterns=[
     path('roadmap/', views.generate_roadmap, name="roadmap"),
     path('chat/send/', views.send_chat_message, name="sendchat"),
     path('chat/history/', views.get_chat_history, name="chathistory"),
+    path('carrer-dna/', views.carrer_dna, name="carrer_dna"),
+    path('skills_gap/', views.skill_gaps, name="skills_gap"),
 ]

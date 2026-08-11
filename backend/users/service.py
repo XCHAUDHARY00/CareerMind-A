@@ -147,3 +147,135 @@ def interact_with_career_coach(user_profile, new_message):
     except Exception as e:
         print("Chatbot Error:", str(e))
         return {"error": "Failed to get response from AI Coach. Please try again."}
+def analyze_career_dna(user_profile):
+    """
+    User ki profile dekh kar AI se complete career DNA analysis karta hai.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return {"error": "API Key missing"}
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-2.5-flash')
+
+    # User data prepare karo
+    skills = [skill.name for skill in user_profile.skills.all()]
+    skills_text = ", ".join(skills) if skills else "No skills added yet"
+    experience = user_profile.experience or "Fresher"
+    latest_goal = user_profile.user_career_goals.last()
+    goal_title = latest_goal.title if latest_goal else "General Software Development"
+
+    prompt = f"""
+You are an AI Career Analyst. Analyze the following student profile and return a detailed career DNA analysis.
+
+Student Profile:
+- Experience: {experience}
+- Skills: {skills_text}
+- Target Goal: {goal_title}
+
+Return ONLY valid JSON (no markdown, no explanation) in this exact format:
+{{
+    "radar_data": [
+        {{"subject": "Backend", "score": 8}},
+        {{"subject": "Frontend", "score": 4}},
+        {{"subject": "AI/ML", "score": 3}},
+        {{"subject": "DevOps", "score": 2}},
+        {{"subject": "Databases", "score": 7}},
+        {{"subject": "System Design", "score": 3}}
+    ],
+    "career_paths": [
+        {{"role": "Backend Developer", "match": 86, "icon": "⚙️", "color": "#6366f1"}},
+        {{"role": "Full Stack Developer", "match": 65, "icon": "🖥️", "color": "#3b82f6"}},
+        {{"role": "AI Engineer", "match": 45, "icon": "🤖", "color": "#8b5cf6"}}
+    ],
+    "personality_tags": ["Builder", "Analytical", "Problem Solver"],
+    "strengths": ["Python", "Django", "SQL"],
+    "growth_areas": ["Docker", "System Design", "React"],
+    "readiness_score": 72,
+    "ai_summary": "2-3 line analysis of the student career potential and next steps."
+}}
+"""
+
+    try:
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        # AI kabhi kabhi markdown backticks add kar deta hai, remove karo
+        if text.startswith('```json'):
+            text = text[7:]
+        elif text.startswith('```'):
+            text = text[3:]
+        if text.endswith('```'):
+            text = text[:-3]
+        return json.loads(text.strip())
+    except Exception as e:
+        print("Career DNA Error:", str(e))
+        return {"error": "Failed to analyze career DNA"}
+def analyze_skill_gaps(user_profile, target_role):
+    """
+    User ki skills aur target role ke beech ka gap calculate karta hai.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return {"error": "API Key missing"}
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-2.5-flash')
+
+    # User ki skills fetch karo
+    skills = [skill.name for skill in user_profile.skills.all()]
+    skills_text = ", ".join(skills) if skills else "None"
+
+    prompt = f"""
+You are a Career Skills Analyst. Compare this student's skills against the requirements for the role: "{target_role}".
+
+Student's current skills: {skills_text}
+
+Return ONLY valid JSON (no markdown, no explanation) in this exact format:
+{{
+    "target_role": "{target_role}",
+    "overall_gap_score": 65,
+    "skill_gaps": [
+        {{
+            "id": 1,
+            "name": "Docker",
+            "category": "DevOps",
+            "current": 2,
+            "required": 7,
+            "gap": 5,
+            "priority": "high",
+            "reason": "Docker is essential for deploying backend apps in production environments."
+        }},
+        {{
+            "id": 2,
+            "name": "System Design",
+            "category": "Architecture",
+            "current": 3,
+            "required": 6,
+            "gap": 3,
+            "priority": "medium",
+            "reason": "System design skills are tested in most mid-level interviews."
+        }}
+    ]
+}}
+
+Priority rules (follow strictly):
+- gap >= 5 → "high"
+- gap 3 or 4 → "medium"
+- gap <= 2 → "low"
+
+Return exactly 6 to 8 skills. Cover: core language, framework, database, DevOps tool, one concept, one soft skill area.
+overall_gap_score is 0-100, higher means more ready (less gap).
+"""
+
+    try:
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        if text.startswith('```json'):
+            text = text[7:]
+        elif text.startswith('```'):
+            text = text[3:]
+        if text.endswith('```'):
+            text = text[:-3]
+        return json.loads(text.strip())
+    except Exception as e:
+        print("Skill Gap Error:", str(e))
+        return {"error": "Failed to analyze skill gaps"}
+

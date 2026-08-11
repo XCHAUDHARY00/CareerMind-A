@@ -6,7 +6,7 @@ from .models import UserProfile,Skill,Education,CareerGoal,ChatMessage
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
-
+from .service import analyze_career_dna,analyze_skill_gaps
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_profiles(request):
@@ -169,13 +169,23 @@ def generate_roadmap(request):
     try:
         from .service import generate_career_roadmap
         profile = request.user.profile
-        roadmap_data = generate_career_roadmap(profile)
+        
+        force_refresh = request.query_params.get('force') == 'true'
+        
+        if profile.roadmap_data and not force_refresh:
+            roadmap_data = profile.roadmap_data
+        else:
+            roadmap_data = generate_career_roadmap(profile)
+            if "error" not in roadmap_data:
+                profile.roadmap_data = roadmap_data
+                profile.save(update_fields=['roadmap_data'])
+                
         if "error" in roadmap_data:
             return Response({"status": "error", "message": roadmap_data["error"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return Response({
             "status": "success",
-            "message": "Roadmap generated successfully",
+            "message": "Roadmap retrieved successfully",
             "data": roadmap_data
         }, status=status.HTTP_200_OK)
     except Exception as e:
@@ -275,3 +285,70 @@ def get_chat_history(request):
         }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def carrer_dna(request):
+    try:
+        profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        return Response({"status": "error", "message": "Profile not found"}, status=404)
+        
+    force_refresh = request.query_params.get('force') == 'true'
+    
+    if profile.career_dna_data and not force_refresh:
+        result = profile.career_dna_data
+    else:
+        result = analyze_career_dna(profile)
+        if "error" not in result:
+            profile.career_dna_data = result
+            profile.save(update_fields=['career_dna_data'])
+            
+    if "error" in result:
+        return Response({"status": "error", "message": result["error"]}, status=500)  
+
+    return Response({"status": "success", "data": result}, status=200)    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def skill_gaps(request):
+    """
+    User ki skill gaps return karta hai.
+    GET /skill-gaps/               → Profile ke career goal se role auto-pick
+    GET /skill-gaps/?role=AI+Engineer → Manually override karo
+    """
+    try:
+        profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        return Response({"status": "error", "message": "Profile not found"}, status=404)
+
+    # Smart role selection — 3 level priority
+    if request.query_params.get('role'):
+        target_role = request.query_params.get('role')
+    elif profile.user_career_goals.exists():
+        target_role = profile.user_career_goals.last().title
+    else:
+        target_role = "Software Developer"
+
+    force_refresh = request.query_params.get('force') == 'true'
+    
+    # Initialize dict if None
+    if profile.skill_gaps_data is None:
+        profile.skill_gaps_data = {}
+        
+    if target_role in profile.skill_gaps_data and not force_refresh:
+        result = profile.skill_gaps_data[target_role]
+    else:
+        result = analyze_skill_gaps(profile, target_role)
+        if "error" not in result:
+            profile.skill_gaps_data[target_role] = result
+            profile.save(update_fields=['skill_gaps_data'])
+
+    if "error" in result:
+        return Response({"status": "error", "message": result["error"]}, status=500)
+
+    return Response({
+        "status": "success",
+        "data": result,
+        "used_role": target_role
+    })
+

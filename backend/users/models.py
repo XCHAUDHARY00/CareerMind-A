@@ -17,6 +17,12 @@ class UserProfile(models.Model):
     experience = models.CharField(max_length=200, blank=True)
     bio = models.TextField(blank=True)
     skills = models.ManyToManyField(Skill, related_name='user_profiles', blank=True)
+    
+    # AI Cached Data
+    career_dna_data = models.JSONField(null=True, blank=True)
+    skill_gaps_data = models.JSONField(null=True, blank=True)
+    roadmap_data = models.JSONField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

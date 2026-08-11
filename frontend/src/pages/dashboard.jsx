@@ -1,527 +1,447 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, useInView } from 'framer-motion';
+import {
+  TrendingUp, Zap, FolderGit2, Mic, ArrowRight,
+  Sparkles, Target, Clock, CheckCircle, ChevronRight,
+  AlertTriangle, BookOpen
+} from 'lucide-react';
+import AppLayout from '../components/layout/AppLayout';
+import AIAssistant from '../components/ai/AIAssistant';
 import api from '../api';
+import {
+  mockDashboardStats, mockSkillGaps, mockCareerPaths,
+  mockRoadmap, mockUser, mockAchievements
+} from '../data/mockData';
+
+// Animated counter
+function AnimatedNumber({ value, suffix = '', duration = 1500 }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+
+  useEffect(() => {
+    if (!inView) return;
+    let startTime;
+    const step = (ts) => {
+      if (!startTime) startTime = ts;
+      const progress = Math.min((ts - startTime) / duration, 1);
+      setCount(Math.round(progress * value));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [inView, value, duration]);
+
+  return <span ref={ref}>{count}{suffix}</span>;
+}
+
+// Score ring
+const ScoreRing = ({ score, size = 100, strokeWidth = 6, color = '#6366f1' }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const dash = (score / 100) * circumference;
+
+  return (
+    <svg width={size} height={size} className="-rotate-90">
+      <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#1a1a2e" strokeWidth={strokeWidth} />
+      <motion.circle
+        cx={size/2} cy={size/2} r={radius} fill="none"
+        stroke={color} strokeWidth={strokeWidth}
+        strokeDasharray={circumference}
+        initial={{ strokeDashoffset: circumference }}
+        animate={{ strokeDashoffset: circumference - dash }}
+        transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 }}
+        strokeLinecap="round"
+        style={{ filter: `drop-shadow(0 0 6px ${color}60)` }}
+      />
+    </svg>
+  );
+};
+
+// Stat card
+const StatCard = ({ icon: Icon, label, value, suffix, color, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.5 }}
+    className="bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-5 hover:border-[#2a2a38] transition-all duration-300 group"
+  >
+    <div className="flex items-center justify-between mb-3">
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}15`, border: `1px solid ${color}25` }}>
+        <Icon size={17} style={{ color }} />
+      </div>
+      <ChevronRight size={14} className="text-[#2a2a38] group-hover:text-[#55556a] transition-colors" />
+    </div>
+    <p className="text-2xl font-bold text-white">
+      <AnimatedNumber value={parseInt(value)} suffix={suffix} />
+    </p>
+    <p className="text-xs text-[#55556a] mt-1">{label}</p>
+  </motion.div>
+);
+
+// Priority badge
+const PriorityBadge = ({ priority }) => {
+  const config = {
+    high: { label: 'High', bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/25' },
+    medium: { label: 'Medium', bg: 'bg-yellow-500/15', text: 'text-yellow-400', border: 'border-yellow-500/25' },
+    low: { label: 'Low', bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/25' },
+  };
+  const c = config[priority] || config.low;
+  return (
+    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
+      {c.label}
+    </span>
+  );
+};
 
 const Dashboard = () => {
-    const navigate = useNavigate();
-    const [profileData, setProfileData] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const [profileData, setProfileData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-    // Editing States
-    const [isEditingProfile, setIsEditingProfile] = useState(false);
-    const [editForm, setEditForm] = useState({ experience: '', bio: '' });
+  useEffect(() => {
+    api.get('/myprofile/').then(res => {
+      if (res.data?.data) setProfileData(res.data.data);
+    }).catch(() => {}).finally(() => setIsLoading(false));
+  }, []);
 
-    // Add Skill State
-    const [newSkill, setNewSkill] = useState('');
+  const displayName = profileData?.user?.username || mockUser.firstName;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-    // Education State
-    const [isAddingEdu, setIsAddingEdu] = useState(false);
-    const [editingEduId, setEditingEduId] = useState(null);
-    const [eduForm, setEduForm] = useState({ course: '', institution: '', start_date: '', end_date: '' });
+  const topGaps = mockSkillGaps.filter(s => s.priority === 'high').slice(0, 3);
+  const topPaths = mockCareerPaths.slice(0, 3);
+  const week1Tasks = mockRoadmap.weeks[0].tasks;
+  const earnedAchievements = mockAchievements.filter(a => a.earned);
 
-    // Goal State
-    const [isAddingGoal, setIsAddingGoal] = useState(false);
-    const [editingGoalId, setEditingGoalId] = useState(null);
-    const [goalForm, setGoalForm] = useState({ title: '', description: '', target_date: '' });
+  return (
+    <AppLayout>
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
 
-    const fetchProfile = async () => {
-        try {
-            const response = await api.get('/myprofile/');
-            setProfileData(response.data.data);
-            setEditForm({
-                experience: response.data.data.experience || '',
-                bio: response.data.data.bio || ''
-            });
-        } catch (err) {
-            console.error("Error fetching profile:", err);
-            if (err.response && err.response.status === 404) {
-                setProfileData(null);
-            } else {
-                setError("Failed to load profile. Please try again later.");
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        {/* Welcome header */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start justify-between"
+        >
+          <div>
+            <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+              {greeting}, {displayName} 👋
+            </h1>
+            <p className="text-sm text-[#55556a] mt-0.5">Here's your career progress today.</p>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#0d0d12] border border-[#1a1a25] rounded-xl">
+            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+            <span className="text-xs text-[#9898b0]">All systems online</span>
+          </div>
+        </motion.div>
 
-    useEffect(() => {
-        fetchProfile();
-    }, []);
+        {/* Hero: Career Readiness */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="relative bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-6 overflow-hidden"
+        >
+          {/* Background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-violet-500/5 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/5 rounded-full blur-3xl pointer-events-none" />
 
-    const handleLogout = () => {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        navigate('/login');
-    };
-
-    // --- Profile Update ---
-    const handleUpdateProfile = async (e) => {
-        e.preventDefault();
-        try {
-            await api.patch(`/updateprofile/${profileData.id}/`, editForm);
-            setIsEditingProfile(false);
-            fetchProfile(); // Refresh
-        } catch (err) {
-            alert("Failed to update profile");
-        }
-    };
-
-    // --- Skill Handlers ---
-    const handleAddSkill = async (e) => {
-        e.preventDefault();
-        if (!newSkill.trim()) return;
-        try {
-            await api.post('/addskills/', { name: newSkill });
-            setNewSkill('');
-            fetchProfile(); // Refresh
-        } catch (err) {
-            alert("Failed to add skill");
-        }
-    };
-
-    const handleRemoveSkill = async (skillId) => {
-        if (!window.confirm("Remove this skill?")) return;
-        try {
-            await api.delete(`/removeskill/${skillId}/`);
-            fetchProfile();
-        } catch (err) {
-            alert("Failed to remove skill");
-        }
-    };
-
-    // --- Education Handlers ---
-    const handleAddEducation = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/addeducation/', eduForm);
-            setIsAddingEdu(false);
-            setEduForm({ course: '', institution: '', start_date: '', end_date: '' });
-            fetchProfile(); // Refresh
-        } catch (err) {
-            alert("Failed to add education");
-        }
-    };
-
-    const handleUpdateEducation = async (e, eduId) => {
-        e.preventDefault();
-        try {
-            await api.put(`/education/${eduId}/`, eduForm);
-            setEditingEduId(null);
-            setEduForm({ course: '', institution: '', start_date: '', end_date: '' });
-            fetchProfile(); // Refresh
-        } catch (err) {
-            alert("Failed to update education");
-        }
-    };
-
-    const handleDeleteEducation = async (eduId) => {
-        if (!window.confirm("Delete this education entry?")) return;
-        try {
-            await api.delete(`/education/${eduId}/`);
-            fetchProfile();
-        } catch (err) {
-            alert("Failed to delete education");
-        }
-    };
-
-    const startEditingEdu = (edu) => {
-        setIsAddingEdu(false);
-        setEditingEduId(edu.id);
-        setEduForm({
-            course: edu.course,
-            institution: edu.institution,
-            start_date: edu.start_date || '',
-            end_date: edu.end_date || ''
-        });
-    };
-
-    // --- Career Goal Handlers ---
-    const handleAddGoal = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/addcarrergoal/', goalForm);
-            setIsAddingGoal(false);
-            setGoalForm({ title: '', description: '', target_date: '' });
-            fetchProfile(); // Refresh
-        } catch (err) {
-            alert("Failed to add career goal");
-        }
-    };
-
-    const handleUpdateGoal = async (e, goalId) => {
-        e.preventDefault();
-        try {
-            await api.put(`/careergoal/${goalId}/`, goalForm);
-            setEditingGoalId(null);
-            setGoalForm({ title: '', description: '', target_date: '' });
-            fetchProfile(); // Refresh
-        } catch (err) {
-            alert("Failed to update career goal");
-        }
-    };
-
-    const handleDeleteGoal = async (goalId) => {
-        if (!window.confirm("Delete this career goal?")) return;
-        try {
-            await api.delete(`/careergoal/${goalId}/`);
-            fetchProfile();
-        } catch (err) {
-            alert("Failed to delete career goal");
-        }
-    };
-
-    const startEditingGoal = (goal) => {
-        setIsAddingGoal(false);
-        setEditingGoalId(goal.id);
-        setGoalForm({
-            title: goal.title,
-            description: goal.description,
-            target_date: goal.target_date || ''
-        });
-    };
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600"></div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-slate-100 p-4 md:p-8">
-            <div className="max-w-6xl mx-auto space-y-6">
-                
-                {/* Header */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 flex flex-col md:flex-row justify-between items-center bg-opacity-90 backdrop-blur-sm border border-white">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                            CareerMind AI
-                        </h1>
-                        <p className="text-gray-500 mt-1">Your Personal Career Control Center</p>
-                    </div>
-                    <div className="mt-4 md:mt-0 flex gap-4">
-                        <button 
-                            onClick={() => navigate('/chat')}
-                            className="bg-gradient-to-r from-purple-500 to-indigo-650 hover:from-purple-600 hover:to-indigo-705 text-white font-bold py-2 px-6 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(124,58,237,0.3)] hover:shadow-[0_0_25px_rgba(124,58,237,0.5)] flex items-center gap-1.5"
-                        >
-                            💬 AI Career Coach
-                        </button>
-                        <button 
-                            onClick={() => navigate('/roadmap')}
-                            className="bg-gradient-to-r from-teal-400 to-emerald-500 hover:from-teal-500 hover:to-emerald-600 text-white font-bold py-2 px-6 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(20,184,166,0.3)] hover:shadow-[0_0_25px_rgba(20,184,166,0.5)]"
-                        >
-                            ✨ AI Roadmap
-                        </button>
-                        <button 
-                            onClick={handleLogout}
-                            className="bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 px-6 rounded-full transition-all duration-300 shadow-sm hover:shadow"
-                        >
-                            Logout
-                        </button>
-                    </div>
+          <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            {/* Score */}
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                <ScoreRing score={78} size={110} strokeWidth={7} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold text-white">78</span>
+                  <span className="text-[10px] text-[#55556a]">/ 100</span>
                 </div>
-
-                {error && (
-                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm">
-                        <p className="text-red-700">{error}</p>
-                    </div>
-                )}
-
-                {!profileData ? (
-                    <div className="bg-white rounded-2xl p-8 text-center shadow-lg">
-                        <div className="text-5xl mb-4">🚀</div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome aboard!</h2>
-                        <p className="text-gray-600 mb-6">Your profile is currently empty. Start building your career journey.</p>
-                        <button 
-                            onClick={() => fetchProfile()}
-                            className="bg-indigo-600 text-white px-6 py-2 rounded-full font-medium hover:bg-indigo-700 transition"
-                        >
-                            Refresh Profile
-                        </button>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        {/* Left Column (Main Profile & Skills) */}
-                        <div className="lg:col-span-1 space-y-6">
-                            
-                            {/* Profile Card */}
-                            <div className="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-indigo-500">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-bold text-gray-800">About Me</h2>
-                                    <button 
-                                        onClick={() => setIsEditingProfile(!isEditingProfile)}
-                                        className="text-indigo-600 text-sm font-medium hover:underline"
-                                    >
-                                        {isEditingProfile ? 'Cancel' : 'Edit'}
-                                    </button>
-                                </div>
-
-                                {isEditingProfile ? (
-                                    <form onSubmit={handleUpdateProfile} className="space-y-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Experience</label>
-                                            <input 
-                                                type="text" 
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                                                value={editForm.experience}
-                                                onChange={e => setEditForm({...editForm, experience: e.target.value})}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Bio</label>
-                                            <textarea 
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm h-24 focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                                                value={editForm.bio}
-                                                onChange={e => setEditForm({...editForm, bio: e.target.value})}
-                                            />
-                                        </div>
-                                        <button type="submit" className="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm font-bold hover:bg-indigo-700 transition">
-                                            Save Changes
-                                        </button>
-                                    </form>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div>
-                                            <p className="text-xs font-semibold text-gray-500 uppercase">Experience</p>
-                                            <p className="text-gray-800 mt-1">{profileData.experience || <span className="text-gray-400 italic">No experience added</span>}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-semibold text-gray-500 uppercase">Bio</p>
-                                            <p className="text-gray-800 mt-1">{profileData.bio || <span className="text-gray-400 italic">No bio added</span>}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Skills Card */}
-                            <div className="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-purple-500">
-                                <h2 className="text-xl font-bold text-gray-800 mb-4">Skills</h2>
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    {profileData.skills && profileData.skills.length > 0 ? (
-                                        profileData.skills.map((skill, idx) => (
-                                            <span key={idx} className="flex items-center bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium shadow-sm group">
-                                                {skill.name}
-                                                <button 
-                                                    onClick={() => handleRemoveSkill(skill.id)}
-                                                    className="ml-2 text-purple-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                                    title="Remove skill"
-                                                >
-                                                    ✖
-                                                </button>
-                                            </span>
-                                        ))
-                                    ) : (
-                                        <p className="text-sm text-gray-400 italic">No skills added yet.</p>
-                                    )}
-                                </div>
-                                <form onSubmit={handleAddSkill} className="flex gap-2">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Add a skill..." 
-                                        className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:outline-none"
-                                        value={newSkill}
-                                        onChange={e => setNewSkill(e.target.value)}
-                                    />
-                                    <button type="submit" className="bg-purple-600 text-white rounded-lg px-4 py-2 text-sm font-bold hover:bg-purple-700 transition">
-                                        Add
-                                    </button>
-                                </form>
-                            </div>
-
-                        </div>
-
-                        {/* Right Column (Education & Goals) */}
-                        <div className="lg:col-span-2 space-y-6">
-                            
-                            {/* Education Section */}
-                            <div className="bg-white rounded-2xl shadow-lg p-6">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-xl font-bold text-gray-800">Education Journey</h2>
-                                    <button 
-                                        onClick={() => { setIsAddingEdu(!isAddingEdu); setEditingEduId(null); setEduForm({ course: '', institution: '', start_date: '', end_date: '' }); }}
-                                        className="text-indigo-600 text-sm font-medium bg-indigo-50 px-4 py-2 rounded-full hover:bg-indigo-100 transition"
-                                    >
-                                        {isAddingEdu ? 'Cancel' : '+ Add Education'}
-                                    </button>
-                                </div>
-
-                                {isAddingEdu && (
-                                    <form onSubmit={handleAddEducation} className="bg-indigo-50 rounded-xl p-5 mb-6 space-y-4 border border-indigo-100">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Course / Degree</label>
-                                                <input required type="text" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" value={eduForm.course} onChange={e => setEduForm({...eduForm, course: e.target.value})} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Institution</label>
-                                                <input required type="text" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" value={eduForm.institution} onChange={e => setEduForm({...eduForm, institution: e.target.value})} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Start Date</label>
-                                                <input required type="date" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" value={eduForm.start_date} onChange={e => setEduForm({...eduForm, start_date: e.target.value})} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">End Date</label>
-                                                <input type="date" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" value={eduForm.end_date} onChange={e => setEduForm({...eduForm, end_date: e.target.value})} />
-                                            </div>
-                                        </div>
-                                        <button type="submit" className="bg-indigo-600 text-white rounded-lg px-6 py-2 text-sm font-bold hover:bg-indigo-700 transition">Save Education</button>
-                                    </form>
-                                )}
-
-                                <div className="space-y-4">
-                                    {profileData.user_educations && profileData.user_educations.length > 0 ? (
-                                        profileData.user_educations.map((edu) => (
-                                            <div key={edu.id} className="border-l-4 border-indigo-500 pl-4 py-2 group relative">
-                                                {editingEduId === edu.id ? (
-                                                    <form onSubmit={(e) => handleUpdateEducation(e, edu.id)} className="bg-indigo-50/50 rounded-xl p-4 space-y-4 border border-indigo-100">
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            <div>
-                                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Course / Degree</label>
-                                                                <input required type="text" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" value={eduForm.course} onChange={e => setEduForm({...eduForm, course: e.target.value})} />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Institution</label>
-                                                                <input required type="text" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" value={eduForm.institution} onChange={e => setEduForm({...eduForm, institution: e.target.value})} />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Start Date</label>
-                                                                <input required type="date" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" value={eduForm.start_date} onChange={e => setEduForm({...eduForm, start_date: e.target.value})} />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">End Date</label>
-                                                                <input type="date" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" value={eduForm.end_date} onChange={e => setEduForm({...eduForm, end_date: e.target.value})} />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button type="submit" className="bg-indigo-600 text-white rounded-lg px-4 py-1.5 text-sm font-bold hover:bg-indigo-700 transition">Update</button>
-                                                            <button type="button" onClick={() => setEditingEduId(null)} className="bg-gray-200 text-gray-700 rounded-lg px-4 py-1.5 text-sm font-bold hover:bg-gray-300 transition">Cancel</button>
-                                                        </div>
-                                                    </form>
-                                                ) : (
-                                                    <>
-                                                        <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <h3 className="font-bold text-gray-800">{edu.course}</h3>
-                                                                <p className="text-gray-600 text-sm">{edu.institution}</p>
-                                                                <p className="text-gray-400 text-xs mt-1">{edu.start_date} to {edu.end_date || 'Present'}</p>
-                                                            </div>
-                                                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button onClick={() => startEditingEdu(edu)} className="text-indigo-600 bg-indigo-50 p-1.5 rounded hover:bg-indigo-100 transition" title="Edit">
-                                                                    ✏️
-                                                                </button>
-                                                                <button onClick={() => handleDeleteEducation(edu.id)} className="text-red-600 bg-red-50 p-1.5 rounded hover:bg-red-100 transition" title="Delete">
-                                                                    🗑️
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                            <p className="text-gray-500 text-sm">No education details added.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Career Goals Section */}
-                            <div className="bg-white rounded-2xl shadow-lg p-6">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-xl font-bold text-gray-800">Career Goals</h2>
-                                    <button 
-                                        onClick={() => { setIsAddingGoal(!isAddingGoal); setEditingGoalId(null); setGoalForm({ title: '', description: '', target_date: '' }); }}
-                                        className="text-teal-600 text-sm font-medium bg-teal-50 px-4 py-2 rounded-full hover:bg-teal-100 transition"
-                                    >
-                                        {isAddingGoal ? 'Cancel' : '+ Add Goal'}
-                                    </button>
-                                </div>
-
-                                {isAddingGoal && (
-                                    <form onSubmit={handleAddGoal} className="bg-teal-50 rounded-xl p-5 mb-6 space-y-4 border border-teal-100">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="md:col-span-2">
-                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Goal Title</label>
-                                                <input required type="text" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-400 focus:outline-none" value={goalForm.title} onChange={e => setGoalForm({...goalForm, title: e.target.value})} />
-                                            </div>
-                                            <div className="md:col-span-2">
-                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Description</label>
-                                                <textarea required className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm h-20 focus:ring-2 focus:ring-teal-400 focus:outline-none" value={goalForm.description} onChange={e => setGoalForm({...goalForm, description: e.target.value})} />
-                                            </div>
-                                            <div className="md:col-span-1">
-                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Target Date</label>
-                                                <input required type="date" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-400 focus:outline-none" value={goalForm.target_date} onChange={e => setGoalForm({...goalForm, target_date: e.target.value})} />
-                                            </div>
-                                        </div>
-                                        <button type="submit" className="bg-teal-600 text-white rounded-lg px-6 py-2 text-sm font-bold hover:bg-teal-700 transition">Save Goal</button>
-                                    </form>
-                                )}
-
-                                <div className="space-y-4">
-                                    {profileData.user_career_goals && profileData.user_career_goals.length > 0 ? (
-                                        profileData.user_career_goals.map((goal) => (
-                                            <div key={goal.id} className="bg-gray-50 p-4 rounded-xl border border-gray-100 hover:shadow-md transition group relative">
-                                                {editingGoalId === goal.id ? (
-                                                    <form onSubmit={(e) => handleUpdateGoal(e, goal.id)} className="space-y-4">
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            <div className="md:col-span-2">
-                                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Goal Title</label>
-                                                                <input required type="text" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-teal-400 focus:outline-none" value={goalForm.title} onChange={e => setGoalForm({...goalForm, title: e.target.value})} />
-                                                            </div>
-                                                            <div className="md:col-span-2">
-                                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Description</label>
-                                                                <textarea required className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm h-20 focus:ring-2 focus:ring-teal-400 focus:outline-none" value={goalForm.description} onChange={e => setGoalForm({...goalForm, description: e.target.value})} />
-                                                            </div>
-                                                            <div className="md:col-span-1">
-                                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Target Date</label>
-                                                                <input required type="date" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-teal-400 focus:outline-none" value={goalForm.target_date} onChange={e => setGoalForm({...goalForm, target_date: e.target.value})} />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button type="submit" className="bg-teal-600 text-white rounded-lg px-4 py-1.5 text-sm font-bold hover:bg-teal-700 transition">Update</button>
-                                                            <button type="button" onClick={() => setEditingGoalId(null)} className="bg-gray-200 text-gray-700 rounded-lg px-4 py-1.5 text-sm font-bold hover:bg-gray-300 transition">Cancel</button>
-                                                        </div>
-                                                    </form>
-                                                ) : (
-                                                    <>
-                                                        <div className="flex justify-between items-start">
-                                                            <h3 className="font-bold text-gray-800">{goal.title}</h3>
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="bg-teal-100 text-teal-700 text-xs px-2 py-1 rounded font-bold">Target: {goal.target_date}</span>
-                                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <button onClick={() => startEditingGoal(goal)} className="text-teal-600 bg-teal-50 p-1.5 rounded hover:bg-teal-100 transition" title="Edit">
-                                                                        ✏️
-                                                                    </button>
-                                                                    <button onClick={() => handleDeleteGoal(goal.id)} className="text-red-600 bg-red-50 p-1.5 rounded hover:bg-red-100 transition" title="Delete">
-                                                                        🗑️
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-gray-600 text-sm mt-2">{goal.description}</p>
-                                                    </>
-                                                )}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                            <p className="text-gray-500 text-sm">No career goals set yet. Aim high!</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                )}
+              </div>
+              <div>
+                <p className="text-xs text-[#55556a] uppercase tracking-wider font-medium mb-1">Career Readiness</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full" />
+                  <span className="text-sm font-semibold text-emerald-400">On Track</span>
+                </div>
+                <p className="text-xs text-[#55556a] mt-1">+6 points this month</p>
+                <div className="mt-2 flex items-center gap-2 text-xs text-[#9898b0]">
+                  <Target size={12} />
+                  <span>Target: <span className="text-indigo-400 font-medium">Backend Developer</span></span>
+                </div>
+              </div>
             </div>
+
+            {/* AI Next Move */}
+            <div className="md:col-span-2 bg-indigo-500/8 border border-indigo-500/20 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                  <Sparkles size={15} className="text-indigo-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-indigo-400 font-semibold uppercase tracking-wider mb-1">Your Next Best Move</p>
+                  <p className="text-sm text-white font-medium mb-2">
+                    Learn Docker and containerize your Django project.
+                  </p>
+                  <p className="text-xs text-[#9898b0] mb-3">
+                    This single skill will unlock <strong className="text-white">3 more career paths</strong> and boost your readiness score by an estimated <strong className="text-white">+8 points</strong>.
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-[10px] text-[#55556a]">
+                      <Clock size={10} />
+                      <span>~8 hours</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] text-[#55556a]">
+                      <TrendingUp size={10} />
+                      <span>High career impact</span>
+                    </div>
+                    <button
+                      onClick={() => navigate('/courses')}
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-[11px] text-white font-semibold transition-colors"
+                    >
+                      Start Learning <ArrowRight size={11} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard icon={TrendingUp} label="Career Match" value={86} suffix="%" color="#6366f1" delay={0.15} />
+          <StatCard icon={Zap} label="Skill Progress" value={64} suffix="%" color="#8b5cf6" delay={0.2} />
+          <StatCard icon={FolderGit2} label="Projects Built" value={3} suffix="" color="#14b8a6" delay={0.25} />
+          <StatCard icon={Mic} label="Interview Score" value={74} suffix="%" color="#f59e0b" delay={0.3} />
         </div>
-    );
+
+        {/* Main grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Skill Gaps */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-5"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-sm font-semibold text-white">Top Skill Gaps</h2>
+              <button onClick={() => navigate('/skill-gaps')} className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+                View all <ChevronRight size={12} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {topGaps.map((gap, i) => (
+                <motion.div
+                  key={gap.id}
+                  initial={{ opacity: 0, x: -15 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 + i * 0.1 }}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-white font-medium">{gap.name}</span>
+                    </div>
+                    <PriorityBadge priority={gap.priority} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-[#1a1a2e] rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${gap.current * 10}%` }}
+                        transition={{ delay: 0.5 + i * 0.1, duration: 0.8, ease: 'easeOut' }}
+                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                      />
+                    </div>
+                    <span className="text-[10px] text-[#55556a] whitespace-nowrap">{gap.current}/{gap.required}</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            <button
+              onClick={() => navigate('/skill-gaps')}
+              className="w-full mt-5 py-2 text-xs text-[#55556a] border border-[#1a1a25] rounded-xl hover:border-indigo-500/30 hover:text-indigo-400 transition-all"
+            >
+              View Full Skill Gap Analysis
+            </button>
+          </motion.div>
+
+          {/* Roadmap preview */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-5"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-sm font-semibold text-white">This Week's Tasks</h2>
+              <button onClick={() => navigate('/roadmap')} className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+                Full roadmap <ChevronRight size={12} />
+              </button>
+            </div>
+            <div className="relative pl-5 space-y-4">
+              {/* Vertical line */}
+              <div className="absolute left-2 top-2 bottom-2 w-px bg-[#1a1a25]" />
+              {week1Tasks.map((task, i) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 + i * 0.1 }}
+                  className="relative"
+                >
+                  <div className={`absolute -left-3 top-1 w-2 h-2 rounded-full border ${
+                    task.status === 'in-progress' ? 'bg-indigo-500 border-indigo-400' :
+                    task.status === 'done' ? 'bg-emerald-500 border-emerald-400' :
+                    'bg-[#1a1a2e] border-[#2a2a3a]'
+                  }`} />
+                  <div className={`pl-3 py-1 ${task.status === 'in-progress' ? 'opacity-100' : 'opacity-70'}`}>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${
+                        task.type === 'course' ? 'bg-blue-500/20 text-blue-400' :
+                        task.type === 'build' ? 'bg-teal-500/20 text-teal-400' :
+                        'bg-violet-500/20 text-violet-400'
+                      }`}>{task.type}</span>
+                      {task.status === 'in-progress' && (
+                        <span className="text-[9px] text-indigo-400 font-medium">In Progress</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-white font-medium">{task.title}</p>
+                    <p className="text-[10px] text-[#55556a] mt-0.5 flex items-center gap-1">
+                      <Clock size={9} />{task.duration}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            <button
+              onClick={() => navigate('/roadmap')}
+              className="w-full mt-5 py-2 text-xs text-[#55556a] border border-[#1a1a25] rounded-xl hover:border-indigo-500/30 hover:text-indigo-400 transition-all"
+            >
+              Open Full Roadmap
+            </button>
+          </motion.div>
+
+          {/* Career matches + Achievements */}
+          <div className="space-y-4">
+            {/* Career matches */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-5"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-white">Top Career Matches</h2>
+                <button onClick={() => navigate('/career-dna')} className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+                  Explore <ChevronRight size={12} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {topPaths.map((path, i) => (
+                  <motion.div
+                    key={path.id}
+                    initial={{ opacity: 0, x: 15 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-transparent hover:border-[#1a1a25] hover:bg-[#111118] transition-all cursor-pointer"
+                    onClick={() => navigate('/career-dna')}
+                  >
+                    <span className="text-lg">{path.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white truncate">{path.role}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex-1 h-1 bg-[#1a1a2e] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${path.match}%`, backgroundColor: path.color }} />
+                        </div>
+                        <span className="text-[10px] font-bold" style={{ color: path.color }}>{path.match}%</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Achievements */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-5"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-white">Achievements</h2>
+                  <p className="text-[10px] text-[#55556a] mt-0.5">Career XP: <span className="text-indigo-400 font-semibold">2,840</span></p>
+                </div>
+                <div className="px-2 py-1 bg-orange-500/15 border border-orange-500/25 rounded-lg flex items-center gap-1.5">
+                  <span className="text-sm">🔥</span>
+                  <span className="text-[10px] font-bold text-orange-400">7 day streak</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {earnedAchievements.map((a) => (
+                  <div key={a.id} className="flex flex-col items-center gap-1 p-2 bg-[#111118] border border-[#1a1a25] rounded-xl">
+                    <span className="text-xl">{a.icon}</span>
+                    <p className="text-[9px] text-[#9898b0] text-center leading-tight">{a.title}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* AI Insight */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-gradient-to-r from-indigo-500/8 to-violet-500/8 border border-indigo-500/15 rounded-2xl p-5 flex items-start gap-4"
+        >
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+            <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }}>
+              <Sparkles size={18} className="text-indigo-400" />
+            </motion.div>
+          </div>
+          <div>
+            <p className="text-xs text-indigo-400 font-semibold uppercase tracking-wider mb-1">AI Insight</p>
+            <p className="text-sm text-white">
+              Based on your current profile, <strong>Backend Development</strong> is your strongest career path with an 86% match. Your biggest opportunity is in cloud infrastructure — learning Docker and AWS could make you job-ready within 90 days.
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Quick links to other pages */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { label: 'Career DNA', icon: '🧬', path: '/career-dna', color: '#6366f1' },
+            { label: 'Courses', icon: '📚', path: '/courses', color: '#8b5cf6' },
+            { label: 'Jobs', icon: '💼', path: '/jobs', color: '#3b82f6' },
+            { label: 'Projects', icon: '🛠️', path: '/projects', color: '#14b8a6' },
+            { label: 'GitHub', icon: '🐙', path: '/github', color: '#10b981' },
+            { label: 'Resume', icon: '📄', path: '/resume', color: '#f59e0b' },
+          ].map((item, i) => (
+            <motion.button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 + i * 0.05 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="p-3 bg-[#0d0d12] border border-[#1a1a25] hover:border-[#2a2a38] rounded-2xl flex flex-col items-center gap-2 transition-all"
+            >
+              <span className="text-xl">{item.icon}</span>
+              <span className="text-[11px] font-medium text-[#9898b0]">{item.label}</span>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      <AIAssistant />
+    </AppLayout>
+  );
 };
 
 export default Dashboard;
