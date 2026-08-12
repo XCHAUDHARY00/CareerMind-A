@@ -120,21 +120,20 @@ def register(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_skills(request):
-    serializer=SkillSerializer(data=request.data)
-    if serializer.is_valid():
-        skill, created = Skill.objects.get_or_create(name=serializer.validated_data['name'])
-        request.user.profile.skills.add(skill)
+    name = request.data.get('name', '').strip()
+    if not name:
         return Response({
-            "status":"success",
-            "message":"skills added successfully",
-            "data":SkillSerializer(skill).data
-        },status=status.HTTP_201_CREATED)
-    else:
-        return Response({
-            "status":"error",
-            "message":"skills addition failed",
-            "data":serializer.errors
-        },status=status.HTTP_400_BAD_REQUEST)
+            "status": "error",
+            "message": "Skill name is required"
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+    skill, created = Skill.objects.get_or_create(name=name)
+    request.user.profile.skills.add(skill)
+    return Response({
+        "status": "success",
+        "message": "skills added successfully",
+        "data": SkillSerializer(skill).data
+    }, status=status.HTTP_201_CREATED)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_education(request):
