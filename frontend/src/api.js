@@ -1,9 +1,10 @@
 import axios from 'axios';
 
 // Ek central axios instance banate hain
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://skillforge-m3zc.onrender.com/api';
+
 const api = axios.create({
-    // Import base URL from .env file
-    baseURL: import.meta.env.VITE_API_BASE_URL,
+    baseURL: API_BASE_URL,
 });
 
 // Request Interceptor: API call bhejne se pehle ye chalega
@@ -46,7 +47,7 @@ api.interceptors.response.use(
                 try {
                     // clean instance context-wise for refresh call to avoid loop
                     const refreshInstance = axios.create({
-                        baseURL: import.meta.env.VITE_API_BASE_URL,
+                        baseURL: API_BASE_URL,
                     });
                     
                     const response = await refreshInstance.post('/token/refresh/', {
