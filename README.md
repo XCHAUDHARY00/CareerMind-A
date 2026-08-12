@@ -15,7 +15,7 @@
     <strong>SkillForge AI</strong> is an autonomous, full-stack AI career operating system built for software developers, engineers, and CS students. It evaluates your multidimensional skills, parses PDF resumes for ATS scoring, aggregates public GitHub commit evidence, generates skill-targeted project blueprints, and conducts interactive AI mock interviews.
   </p>
 
-  [Features](#-all-features) • [Architecture](#-system-architecture) • [Run on Your Machine](#-how-to-run-on-your-machine) • [API Reference](#-api-reference) • [Curriculum Notes](#-curriculum-notes-days-126)
+  [Features](#-all-features) • [Architecture](#-system-architecture) • [Run on Your Machine](#-how-to-run-on-your-machine) • [API Reference](#-api-reference)
 
 </div>
 
@@ -153,39 +153,6 @@ docker-compose up --build
 | `POST` | `/api/interview/start/` | `{"target_role": "Backend Developer", "difficulty": "Medium"}` | `{"session_id": 1, "first_question": "..."}` | Yes |
 | `POST` | `/api/interview/answer/` | `{"session_id": 1, "answer_text": "..."}` | `{"next_question": "...", "ai_feedback": "..."}` | Yes |
 | `POST` | `/api/interview/end/` | `{"session_id": 1}` | Final technical & communication score summary | Yes |
-
----
-
-## 📚 Curriculum Notes (Days 1–26)
-
-The project includes a complete 26-day backend & frontend engineering curriculum written in **Hinglish ("Bhai Language")** with real-world analogies and **10 technical interview questions per day**:
-
-- 📄 [Day 1: Database and Admin](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_1_Database_and_Admin.md)
-- 📄 [Day 2: Serializers](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_2_Serializers.md)
-- 📄 [Day 3: PUT, PATCH, DELETE](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_3_PUT_PATCH_DELETE.md)
-- 📄 [Day 4: Authentication JWT](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_4_Authentication_JWT.md)
-- 📄 [Day 5: Registration API](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_5_Registration_API.md)
-- 📄 [Day 6: Advanced Relationships](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_6_Advanced_Relationships.md)
-- 📄 [Day 7: React Basics](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_7_React_Basics.md)
-- 📄 [Day 8: Frontend Auth JWT](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_8_Frontend_Auth_JWT.md)
-- 📄 [Day 9: Advanced Frontend Integration](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_9_Advanced_Frontend_Integration.md)
-- 📄 [Day 10: AI Integration Architecture](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_10_AI_Integration_Architecture.md)
-- 📄 [Day 11: Final Architecture and Interview](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_11_Final_Architecture_And_Interview.md)
-- 📄 [Day 12: AI Chatbot Architecture](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_12_AI_Chatbot_Architecture.md)
-- 📄 [Day 13: Premium Frontend Overhaul](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_13_Premium_Frontend_Overhaul.md)
-- 📄 [Day 14: Career DNA, React Query & Skill Gap API](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_14_Career_DNA_API.md)
-- 📄 [Day 15: Mock Interview Architecture](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_15_Mock_Interview_Architecture.md)
-- 📄 [Day 16: GitHub Intelligence & Public API Aggregation](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_16_GitHub_Intelligence_API.md)
-- 📄 [Day 17: Resume PDF Parsing & PyPDF2 Engine](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_17_Resume_PDF_Parsing_Engine.md)
-- 📄 [Day 18: Dynamic Stats Engine](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_18_Dynamic_Stats_Engine.md)
-- 📄 [Day 19: Global Theming Engine & CSS Tokens](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_19_Global_Theming_and_Design_Tokens.md)
-- 📄 [Day 20: Cost Optimization & AI Response Caching](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_20_AI_Cost_Optimization_and_Caching.md)
-- 📄 [Day 21: State Management & Token Refresh Interceptors](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_21_State_Management_and_Token_Refresh.md)
-- 📄 [Day 22: Framer Motion & Responsive UX](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_22_Framer_Motion_and_Responsive_UX.md)
-- 📄 [Day 23: Security Best Practices & Environment Hardening](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_23_Security_and_Environment_Hardening.md)
-- 📄 [Day 24: Database Optimization & Indexing Strategies](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_24_Database_Optimization_and_Indexing.md)
-- 📄 [Day 25: API Performance Tuning & Load Management](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_25_API_Performance_Tuning.md)
-- 📄 [Day 26: Production Deployment & Cloud Infrastructure](file:///Users/rajchaudhary/createmindai/CareerMind-A/notes/Day_26_Production_Deployment_and_DevOps.md)
 
 ---
 

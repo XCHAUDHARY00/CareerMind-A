@@ -83,7 +83,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-DATABASE_URL = os.getenv('DATABASE_URL', '').strip()
+DATABASE_URL = os.getenv('DATABASE_URL', '').strip().strip('\'"')
 if DATABASE_URL and '://' in DATABASE_URL and not DATABASE_URL.startswith('://'):
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
@@ -93,7 +93,9 @@ if DATABASE_URL and '://' in DATABASE_URL and not DATABASE_URL.startswith('://')
             DATABASES = {'default': parsed_db}
         else:
             raise ValueError("Invalid database engine")
-    except Exception:
+    except Exception as e:
+        import sys
+        print(f"DATABASE_URL parsing error: {e}", file=sys.stderr)
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
