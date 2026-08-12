@@ -146,6 +146,9 @@ const Dashboard = () => {
   const readinessScore = profileData?.readiness_score || careerMatch || 65;
   const realXP = profileData?.career_xp || 250;
   const realStreak = profileData?.streak || 1;
+  const targetRole = profileData?.user_career_goals?.length
+    ? profileData.user_career_goals[profileData.user_career_goals.length - 1].title
+    : (bestPath?.role || 'Software Developer');
   const skillProgress = skillGaps.length > 0
     ? Math.round(skillGaps.reduce((s, g) => s + (g.current_level || g.current || 0) / (g.required_level || g.required || 10) * 100, 0) / skillGaps.length)
     : 0;
@@ -193,6 +196,31 @@ const Dashboard = () => {
           </div>
         </motion.div>
 
+        {/* First Complete Profile Warning Banner */}
+        {(!profileData?.skills?.length || !profileData?.user_career_goals?.length || !profileData?.user_educations?.length) && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-red-500/10 border border-orange-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="text-orange-400" size={20} />
+              </div>
+              <div className="text-left">
+                <h4 className="text-sm font-bold text-white">First, Complete Your Career Profile! ⚡</h4>
+                <p className="text-xs text-[#9898b0] mt-0.5">Please add your skills, education, and target career goals on the profile page to unlock personalized AI roadmaps and skill gap diagnostics.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/profile')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 rounded-xl text-xs text-white font-bold transition-all shadow-md hover:shadow-orange-500/25 whitespace-nowrap"
+            >
+              Complete Profile <ArrowRight size={13} />
+            </button>
+          </motion.div>
+        )}
+
         {/* Hero: Career Readiness */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="relative rounded-2xl p-6 overflow-hidden border"
@@ -218,7 +246,7 @@ const Dashboard = () => {
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Based on your real profile & activity</p>
                 <div className="mt-2 flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
                   <Target size={12} />
-                  <span>Target: <span className="text-indigo-400 font-medium">{bestPath?.role || 'Backend Developer'}</span></span>
+                  <span>Target: <span className="text-indigo-400 font-medium">{targetRole}</span></span>
                 </div>
               </div>
             </div>
