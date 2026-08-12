@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 DATABASE_URL = os.getenv('DATABASE_URL', '').strip()
-if DATABASE_URL:
+if DATABASE_URL and '://' in DATABASE_URL and not DATABASE_URL.startswith('://'):
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     try:
@@ -93,8 +93,7 @@ if DATABASE_URL:
             DATABASES = {'default': parsed_db}
         else:
             raise ValueError("Invalid database engine")
-    except Exception as e:
-        print(f"DATABASE_URL parse warning: {e}. Falling back to SQLite.")
+    except Exception:
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
@@ -108,6 +107,7 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
 
 
 # Password validation
