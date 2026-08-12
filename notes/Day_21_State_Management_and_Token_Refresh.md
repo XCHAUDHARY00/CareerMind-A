@@ -26,6 +26,14 @@ Bhai, single-page application (SPA) me sabse bada bug hota hai: **"Random auto-l
 let isRefreshing = false;
 let failedQueue = [];
 
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -66,34 +74,80 @@ api.interceptors.response.use(
 
 ---
 
-## ❓ 10 Technical Interview Questions & Answers
+## ❓ 10 In-Depth Technical Interview Questions & Answers
 
-### Q1: Access Token short-lived (e.g. 1 day) aur Refresh Token long-lived (7 days) kyu hote hain?
-**Answer:** Access Token client-side security risk me expose hota hai (har HTTP header me jata hai). Agar intercept ho jaaye to attacker access max 1 day tak raheta hai. Refresh Token secure endpoint par hit karta hai to mint fresh access tokens.
+### Q1: JWT Access Token Short-Lived (1 Day) aur Refresh Token Long-Lived (7 Days) Rakhne ki Dual-Token Security Architecture Why Mandatory?
+**Detailed Answer (Bhai Language):** 
+- **Access Token**: Every HTTP Authorization Header me pass hota hai (`Bearer ey...`). Internet transits & Client script memory me high exposure risks hone ki wajeh se, agar Attacker Access Token steal kar bhi le, to validity short-lived होने par window automatic closed ho jaati hai.
+- **Refresh Token**: Client isey strict token refresh endpoint (`/api/token/refresh/`) ke alawa kisi public API header me send nahi karta. Is Dual Token architecture se System Security 10x improve hoti hai without forcing user logins daily.
 
-### Q2: Interceptor me `failedQueue` (Promise Queue) ka kya role hai?
-**Answer:** Jab multiple parallel API requests simultaneously 401 hit karti hain, tab sirf 1 refresh call jati hai. Baaki pending requests queue me hold ho jati hain aur new token milte hi replay ho jati hain (avoiding race conditions).
+---
 
-### Q3: React Query (TanStack Query) client-side state caching me kaise help karta hai?
-**Answer:** Component unmount hone par data memory me cache rakhta hai, window refocus par auto-refetch karta hai, aur global loading/error states out-of-the-box provide karta hai.
+### Q2: Axios Interceptor me `failedQueue` Promise Queue Promise holding Array Parallel Requests Race Condition kaise resolve karti hai?
+**Detailed Answer (Bhai Language):** 
+Jab user page reload karta hai, UI simultaneously 5 APIs trigger karti hai (Profile, DNA, Gaps, Roadmap, Streak). Agar Access Token Expired hai, to 5 requests Simultaneously HTTP `401 Unauthorized` throw karengi.
+Without Promise Queue: 5 Parallel Token Refresh requests backend me duplicate hits karti.
+With `failedQueue` Interceptor Pattern:
+1. First 401 request `isRefreshing = true` flag set karti hai aur refresh API call karti hai.
+2. Remaining 4 Parallel 401 requests `failedQueue` array me Hold (Pending Promises) ho jaati hain.
+3. Refresh API successful response aate hi `processQueue(null, newToken)` execute hota hai, new token distribution ho jati hai, aur saari 5 pending requests single batch retry me pass ho jati hain!
 
-### Q4: Infinite loop token refresh interceptor me kaise roka jata hai?
-**Answer:** `originalRequest._retry = true` flag check karke. Agar refresh call itself fail hoti hai ya original request dobara fail hoti hai to user clear storage ke saath `/login` redirect hota hai.
+---
 
-### Q5: LocalStorage vs HttpOnly Cookies JWT storage for security?
-**Answer:** `HttpOnly Cookies` XSS attacks se completely protected hote hain kyunki JavaScript unko read nahi kar sakti. `LocalStorage` easier to setup hai par XSS Vulnerable hota hai, isiliye input sanitization compulsory hoti hai.
+### Q3: JWT Token Invalidation (Logout Execution) Server-Side State without Database Session Lookup kaise perform ki jaati hai?
+**Detailed Answer (Bhai Language):** 
+JWT Stateless Architecture follow karta hai. Server-Side Token Invalidation methods:
+1. **Blacklist Refresh Token DB Table**: Logout request hit hone par `refresh_token` backend blacklist DB table me insert ho jata hai (`django-rest-framework-simplejwt.token_blacklist`). Refresh Attempt block ho jata hai.
+2. **Client-Side Storage Flush**: `localStorage.clear()` removes both Access & Refresh tokens, dropping client capability to authorize.
 
-### Q6: Axios Response Interceptor Request Interceptor se kaise alag hai?
-**Answer:** Request Interceptor request bhejne se *pehle* run hota hai (header Authorization token add karne ke liye). Response Interceptor server output return hone ke *baad* run hota hai (errors status handle karne ke liye).
+---
 
-### Q7: User Token Expire hone par bina page reload state reset kaise hoti hai?
-**Answer:** AuthContext me `logout()` call karke `user` state `null` set kar di jaati hai jisse React router ProtectedRoute component auto-redirect trigger karta hai.
+### Q4: Infinite Loop Interceptor Retries (401 Infinite Trap) application crash kaise prevent kiya jata hai?
+**Detailed Answer (Bhai Language):** 
+`originalRequest._retry = true` flag guard clause check karke. Agar Retry request itself HTTP 401 return kare (meaning Refresh Token is ALSO Expired/Invalid), to flag check retry attempt block kar deta hai, storage clear karke client ko safely `/login` redirect kar deta hai.
 
-### Q8: SimpleJWT library Django me refresh token rotation kya hota hai?
-**Answer:** `ROTATE_REFRESH_TOKENS = True` config set karne se har refresh endpoint hit par new Refresh Token issue hota hai aur purana blacklist me chala jata hai (High Security).
+---
 
-### Q9: 403 Forbidden vs 401 Unauthorized status codes me kya fark hai?
-**Answer:** `401 Unauthorized`: Client authenticated nahi hai (token missing/expired). `403 Forbidden`: Client authenticated hai par specific resource access karne ke permission nahi hain.
+### Q5: LocalStorage vs HttpOnly SameSite Cookies Storage Security comparison?
+**Detailed Answer (Bhai Language):** 
+- **LocalStorage**: JavaScript readable (`localStorage.getItem()`). If application suffers XSS vulnerability, attacker script can read tokens.
+- **HttpOnly Cookies**: Browser enforces JavaScript access blocking (`document.cookie` cannot read). Completely immune to XSS token theft! Recommended for enterprise production setups.
 
-### Q10: Parallel requests token refresh race condition test kaise kar sakte hain?
-**Answer:** Browser DevTools Network Tab me Throttling Set karke Simultaneously 5 different API endpoints (Profile, DNA, Gaps, Roadmap, Chat) triggering manually run karna.
+---
+
+### Q6: Axios Request Interceptor vs Response Interceptor Responsibilities separation?
+**Detailed Answer (Bhai Language):** 
+- **Request Interceptor**: Pre-flight HTTP dispatch step. Attaches `Authorization: Bearer <token>` header dynamically to outgoing requests.
+- **Response Interceptor**: Post-flight HTTP arrival step. Analyzes status codes (`401`, `403`, `500`), triggers auto-refresh queues, and presents user toast error notifications.
+
+---
+
+### Q7: Single-Page Application (SPA) Client Router Protected Routes (`ProtectedRoute.jsx`) Auth state Guarding kaise karti hain?
+**Detailed Answer (Bhai Language):** 
+```javascript
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <LoadingSpinner />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return children;
+};
+```
+Isse non-authenticated users confidential app routes (`/dashboard`, `/profile`) direct URL typing se enter nahi kar sakte.
+
+---
+
+### Q8: SimpleJWT `ROTATE_REFRESH_TOKENS = True` Setting security footprint kaise elevate karti hai?
+**Detailed Answer (Bhai Language):** 
+Jab client Token Refresh Endpoint hit karta hai, server sirf new Access Token nahi bhejta, balki new Refresh Token bhi issue karta hai aur purana Refresh Token instant invalidate kar deta hai. Stolen Refresh Token replay attacks zero ho jaate hain.
+
+---
+
+### Q9: Silent Token Refreshing Failure (Network Offline) UX handling strategy kya hoti hai?
+**Detailed Answer (Bhai Language):** 
+Network Connection drop hone par Refresh API HTTP `Network Error` throw karti hai. Interceptor user ko force-logout nahi karta, balki temporary offline banner display karke Internet recover hone par request retry allow karta hai.
+
+---
+
+### Q10: Custom API Client Wrapper (`api.js`) vs Native `fetch()` Web API production advantages?
+**Detailed Answer (Bhai Language):** 
+Native `fetch()` headers injection, response status validation (`res.ok`), JSON body parsing (`await res.json()`), aur token refresh interceptors natively support nahi karta — massive duplicated boilerplate code require hota. Axios instances default headers, global timeout rules, base URLs, and response queues centralize kar dete hain.

@@ -1,7 +1,7 @@
 # Day 17: Resume PDF Parsing & PyPDF2 Engine 📄
 
 ## 📌 Context & Concept Summary
-Bhai, modern hiring ATS (Applicant Tracking System) software se hoti hai. Humne CareerMind AI me ek PDF Upload & Analysis module banaya hai jo PyPDF2 library ke dwara resume se pure raw text extract karta hai, aur Gemini AI engine us text ka breakdown, ATS readiness score, skill relevance, aur actionable tips return karta hai.
+Bhai, modern hiring ATS (Applicant Tracking System) software se hoti hai. Humne SkillForge AI me ek PDF Upload & Analysis module banaya hai jo PyPDF2 library ke dwara resume se pure raw text extract karta hai, aur Gemini AI engine us text ka breakdown, ATS readiness score, skill relevance, aur actionable tips return karta hai.
 
 ---
 
@@ -10,11 +10,6 @@ Bhai, modern hiring ATS (Applicant Tracking System) software se hoti hai. Humne 
 2. **PyPDF2 Text Extraction**: `PyPDF2.PdfReader(io.BytesIO(file_bytes))` se pages loop karke raw plain text memory me string format me extract karte hain.
 3. **Smart Text Trimming**: Token limit & API cost optimize karne ke liye max 3,000 characters slice kiye jaate hain.
 4. **Structured JSON Output Prompting**: Gemini prompt explicit JSON schema specify karta hai (`ats`, `skill_relevance`, `project_strength`, `ai_tips`).
-
----
-
-## 💡 Real Life Analogy
-Socho tum kisi x-ray lab me gaye ho. Doctor (PyPDF2) x-ray machine me film (PDF resume) daalta hai aur bone structure ka raw snapshot (Text) nikalta hai. Phir Specialist Doctor (Gemini AI) report dekh kar scorecard aur prescription (ATS Score + Tips) likh ke deta hai!
 
 ---
 
@@ -28,57 +23,107 @@ def upload_resume(request):
     if not file or not file.name.lower().endswith('.pdf'):
         return Response({"status": "error", "message": "Only PDF files supported"}, status=400)
     
-    # Read PDF text using PyPDF2
+    # 10MB Size Limit Validation
+    if file.size > 10 * 1024 * 1024:
+        return Response({"status": "error", "message": "File exceeds 10MB limit"}, status=400)
+        
     pdf_bytes = file.read()
     reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
     text_parts = [page.extract_text() for page in reader.pages if page.extract_text()]
     resume_text = '\n'.join(text_parts).strip()
     
-    # Gemini Analysis & DB Cache
+    # Trim to 3000 chars for token cost optimization
+    trimmed_text = resume_text[:3000]
+    
+    # Gemini Prompting & DB Cache
     profile = request.user.profile
-    profile.resume_text = resume_text
-    profile.resume_analysis = analysis
+    profile.resume_text = trimmed_text
+    profile.resume_filename = file.name
+    profile.resume_analysis = analysis_json
     profile.save()
-    return Response({"status": "success", "data": analysis})
+    return Response({"status": "success", "data": analysis_json})
 ```
 
 ---
 
-## ❓ 10 Technical Interview Questions & Answers
+## ❓ 10 In-Depth Technical Interview Questions & Answers
 
-### Q1: PyPDF2 raw image PDF (scanned PDF) se text Extract kar sakta hai?
-**Answer:** Nahi, PyPDF2 sirf digital/text-based PDFs se text extraction kar sakta hai. Scanned PDF/Image PDFs ke liye OCR (Tesseract / AWS Textract) ki zaroorat hoti hai.
+### Q1: PyPDF2 raw image-based PDFs (Scanned Resumes) se text extract kyu nahi kar sakta, aur production architecture me iska fallback kya hona chahiye?
+**Detailed Answer (Bhai Language):** 
+PyPDF2 PDF container ke internal `Font Objects` aur `Text Operators` ko parse karta hai. Image-based/Scanned PDFs me textual glyphs ki jagah raw PNG/JPEG bitmaps hote hain, isiliye PyPDF2 blank output return karta hai.
+Production fallback pipeline:
+$$\text{PDF Input} \longrightarrow \text{PyPDF2 Extraction} \longrightarrow \begin{cases} \text{Success (text length } > 50\text{)}, & \text{Proceed to Gemini AI} \\ \text{Empty String (Scanned)}, & \text{Route to Tesseract OCR / AWS Textract Engine} \end{cases}$$
+OCR engine image bytes ko Optical Character Recognition से scan karke text recover kar leta hai.
 
-### Q2: Multipart/form-data kya hota hai aur application/json se kaise alag hai?
-**Answer:** `application/json` sirf text data ke liye hota hai. Binary files (PDF, images) ko transmit karne ke liye `multipart/form-data` encoding boundaries ka use karti hai jisse file segments Stream format me pass hote hain.
+---
 
-### Q3: Large PDF file upload se Memory crash/DoS attack kaise rokte hain?
-**Answer:** Backend upload validation se:
-1. `file.size > 10 * 1024 * 1024` (10MB Max Limit enforce).
-2. Django `FILE_UPLOAD_MAX_MEMORY_SIZE` config set karke disk swapping monitor karna.
+### Q2: Multipart/form-data encoding binary file uploads me `application/json` se kaise diff karta hai?
+**Detailed Answer (Bhai Language):** 
+- `application/json`: Pure Unicode text payload transmission for key-value structures. Binary data pass karne par Base64 encoding karni padegi, jisse file size 33% Inflate ho jaati hai!
+- `multipart/form-data`: Body me multi-part MIME boundaries (`--boundary123`) define karti hai. Binary streams (PDF/Image bytes) directly chunked network packets me send hote hain without bloat.
 
-### Q4: PyPDF2, pdfplumber aur pypdf me kya difference hai?
-**Answer:** `PyPDF2` lightweight aur fast text extraction ke liye ideal hai. `pdfplumber` tables aur layout coordinates preserve karti hai (heavy processing). `pypdf` PyPDF2 ka modern active fork hai.
+---
 
-### Q5: Gemini API prompt me `no markdown backticks` kyu insist karte hain?
-**Answer:** LLMs by default JSON ko ` ```json ... ``` ` wrappers me wrap kar dete hain. `json.loads()` fail na ho iske liye strict prompt + backend stripping (`replace('```json','')`) zaroori hoti hai.
+### Q3: Large File Upload Denial-of-Service (DoS) Attacks se Backend Memory and Server Disk crash kaise protect hote hain?
+**Detailed Answer (Bhai Language):** 
+1. **DRF File Size Validation**: `if file.size > 10 * 1024 * 1024: return Response(..., status=400)` before allocating memory.
+2. **Memory Stream Swapping**: Django setting `FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440` (2.5MB). 2.5MB se choti files RAM `BytesIO` me rehti hain, jabki badi files OS `/tmp` disk directory me spool ho jaati hain to prevent RAM exhaustion.
 
-### Q6: Resume Text trimming (3,000 chars) kyu ki gayi hai?
-**Answer:** Resumes aam taur par 1-2 pages ke hote hain (~2,000–3,000 chars). Rest metadata/overflow tokens cut-off karne se Gemini API input tokens drop hote hain, jisse API cost 70% decrease hoti hai aur latency fast ho jaati hai.
+---
 
-### Q7: If PyPDF2 returns empty string (`len(text) < 50`), application kya handle karti hai?
-**Answer:** User ko error response return karti hai: `"Could not extract text from PDF. Try a text-based PDF."` jisse invalid AI processing budget waste na ho.
+### Q4: Text Trimming (`resume_text[:3000]`) se LLM Token Cost & Latency 70% drop kaise hoti hai?
+**Detailed Answer (Bhai Language):** 
+LLM pricing per 1,000 input tokens calculate hoti hai. Full 10-page resume (~15,000 characters) ~4,000 input tokens spend karega. Most resumes ka critical content (Skills, Projects, Work Experience) first 2 pages (~3,000 characters = ~750 tokens) me ready rehta hai. Trimming से Token usage ~80% reduce hoti hai aur Gemini API latency 2.5s se sub-800ms me transform ho jati hai!
 
-### Q8: Resume analysis profile DB me store karne ka kya fayda hai?
-**Answer:** User jab bhi `/resume` page open kare, dobara Gemini call ki zaroorat nahi parti. Data direct `profile.resume_analysis` JSONField se instantly return ho jata hai (Zero API Cost on revisit).
+---
 
-### Q9: DRF me `parser_classes([MultiPartParser, FormParser])` decorator kyu add kiya gaya?
-**Answer:** DRF by default JSON input expect karta hai. Binary file upload request me request payload parse karne ke liye MultiPartParser specify karna mandatory hota hai.
+### Q5: If PyPDF2 raises a corrupted PDF Exception, Application Crash resilience kaise ensure hoti hai?
+**Detailed Answer (Bhai Language):** 
+`PyPDF2.errors.PdfReadError` try-except block me handle hoti hai:
+```python
+try:
+    reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
+    ...
+except PyPDF2.errors.PdfReadError:
+    return Response({"status": "error", "message": "Corrupted PDF file. Please re-save your resume PDF."}, status=400)
+```
+Isse Python server unhandled `500 Internal Server Error` and stack trace log leak avoid karta hai.
 
-### Q10: ATS (Applicant Tracking System) scoring criteria AI me kaise model hoti hai?
-**Answer:** Prompt in 5 dimensions par weightage deta hai:
-- Keyword Relevance (Skill match)
-- Quantified Impact Statements (e.g. "Reduced latency by 40%")
-- Formatting & Section structure
-- Role Alignment
-- Project quality evidence
+---
+
+### Q6: Resume analysis payload PostgreSQL `JSONField` me cache karne se performance boost kya milta hai?
+**Detailed Answer (Bhai Language):** 
+Jab candidate `/resume` page open karta hai, frontend GET endpoint `/api/resume/analysis/` call karta hai. Backend direct DB query se `profile.resume_analysis` JSONField `<15ms` me return kar deta hai. Gemini API par redundant HTTP calls completely eliminate ho jaati hain ($0 API cost on repeat visits).
+
+---
+
+### Q7: DRF me `@parser_classes([MultiPartParser, FormParser])` annotation ka internal role kya hai?
+**Detailed Answer (Bhai Language):** 
+DRF views by default `JSONParser` use karte hain. Agar Binary File Upload Request (Multipart) bina MultiPartParser annotation ke aayegi, to DRF request payload parse nahi kar paayega aur `request.FILES` dictionary empty (`None`) return karega.
+
+---
+
+### Q8: ATS (Applicant Tracking System) Score Engine Gemini prompt me konsi 5 Dimensions analyze karta hai?
+**Detailed Answer (Bhai Language):** 
+1. **Keyword Match Density**: Job description skills vs resume skills matching.
+2. **Action Verbs & Impact Statements**: Quantified achievements (e.g. *"Optimized database queries by 40%"*).
+3. **Format & Section Structure**: Professional section headers (Skills, Education, Projects).
+4. **Role Alignment**: Current resume terminology vs target role title.
+5. **Evidence Verification**: Skills match against real GitHub repositories.
+
+---
+
+### Q9: File Upload Extensions Manipulation (`mycode.exe.pdf`) security risk ko kaise defeat karte hain?
+**Detailed Answer (Bhai Language):** 
+File extension check ke saath-saath Magic Byte Header Validation checking:
+```python
+if not pdf_bytes.startswith(b'%PDF-'):
+    return Response({"status": "error", "message": "Invalid file content"}, status=400)
+```
+PDF files ka binary stream humesha `%PDF-` signature se start hota hai, preventing malicious executable scripts renamed as `.pdf`.
+
+---
+
+### Q10: Python `io.BytesIO` in-memory stream buffer read operations me kyu use kiya jata hai?
+**Detailed Answer (Bhai Language):** 
+`file.read()` raw binary `bytes` return karta hai. PyPDF2 file-like object interface expect karta hai (methods like `.read()`, `.seek()`). `io.BytesIO(pdf_bytes)` memory binary array ko file-like stream wrapper me convert kar deta hai without needing temporary disk writing!

@@ -15,7 +15,7 @@
     <strong>SkillForge AI</strong> is an autonomous, full-stack AI career operating system built for software developers, engineers, and CS students. It evaluates your multidimensional skills, parses PDF resumes for ATS scoring, aggregates public GitHub commit evidence, generates skill-targeted project blueprints, and conducts interactive AI mock interviews.
   </p>
 
-  [Features](#-all-features) • [System Architecture](#-system-architecture) • [Run on Your Machine](#-how-to-run-on-your-machine) • [API Reference](#-api-reference) • [Curriculum Notes](#-curriculum-notes-days-126)
+  [Features](#-all-features) • [Architecture](#-system-architecture) • [Run on Your Machine](#-how-to-run-on-your-machine) • [API Reference](#-api-reference) • [Curriculum Notes](#-curriculum-notes-days-126)
 
 </div>
 
@@ -23,74 +23,31 @@
 
 ## 🔥 All Features
 
-### 1. 🧬 Career DNA Analysis Engine
-- **Multidimensional Mapping**: Evaluates your known languages, frameworks, and experience levels against target roles (Backend, Full Stack, AI Engineer).
-- **Match Breakdown**: Calculates match percentage, personality profile tags, strengths, and growth recommendations.
-- **Smart DB Caching**: Result cached in `UserProfile.career_dna_data` (0 API calls on repeat visits).
-
-### 2. ⚡ Skill Gap Diagnostics
-- **Market Comparison**: Compares your skills against real industry requirements for senior and mid-level roles.
-- **Priority Ratings**: Categorizes missing skills into `High`, `Medium`, and `Low` priority targets with clear explanations.
-
-### 3. 🐙 GitHub Intelligence & Contribution Streak
-- **Public API Aggregation**: Fetches public repositories, stargazers count, and top language distributions.
-- **Real Commit Streak Engine**: Analyzes public GitHub event timestamps (`/users/{username}/events`) to compute continuous daily contribution streaks.
-- **24-Hour Cache**: Results cached for 24 hours in DB (`github_data_updated`) to respect API rate limits.
-
-### 4. 📄 Resume ATS Engine & PDF Extractor
-- **PyPDF2 Binary Parsing**: Accepts PDF resumes, extracts raw text, and limits payloads to 3,000 characters to optimize token usage.
-- **Gemini ATS Scoring**: Scores resume formatting, ATS readiness, keyword density, and produces bullet-point improvement tips.
-
-### 5. 🎤 Interactive AI Mock Interview Simulator
-- **Role-Specific Interviews**: Select Target Role, Difficulty (Easy, Medium, Hard), and Type (Technical, Behavioral, System Design).
-- **Real-Time Evaluation**: Generates single questions, evaluates user answers dynamically, and scores technical accuracy and clarity.
-
-### 6. 🛠️ Skill-Targeted Derived AI Projects (Zero Cost)
-- **Zero API Expense**: Projects are derived 100% locally on the client from your real skill gaps.
-- **Actionable Blueprints**: Every project includes difficulty tags, estimated completion hours, and step-by-step milestones.
-
-### 7. 🗺️ Personalized Learning Roadmap
-- **Weekly Milestones**: Connects course studies, hands-on builds, and proof tasks in a 4-week timeline tailored to your career goal.
-
-### 8. 🎨 Global Design System & Light/Dark Mode
-- **Token-Based Theming**: Seamless switching between Light Mode 🌞 and Dark Mode 🌙 via `ThemeContext` and CSS custom properties (`var(--bg-card)`, `var(--text-primary)`).
-- **Framer Motion Micro-animations**: Smooth entrance transitions, animated counters, and SVG score progress rings.
+| Feature | Description | Gemini AI Cost |
+|---|---|---|
+| 🧠 **Career DNA Engine** | Multidimensional evaluation mapping your strengths against target job roles | **Cached in DB** ($0 on revisit) |
+| ⚡ **Skill Gap Diagnostics** | Analyzes missing market skills and prioritizes high-impact learning targets | **Cached in DB** ($0 on revisit) |
+| 🐙 **GitHub Intelligence** | Fetches repos, stars, language breakdowns, and contribution streaks | **Cached 24h** ($0 on revisit) |
+| 📄 **Resume ATS Engine** | PyPDF2 text extraction + ATS readiness scoring & bullet-point tips | **Cached in DB** ($0 on revisit) |
+| 🎤 **Mock Interview AI** | Interactive voice/text simulator scoring technical accuracy & clarity | **Per session** (~7 calls) |
+| 🛠️ **AI Derived Projects** | Skill-targeted project blueprints derived locally from skill gaps | **Zero API Cost ($0)** |
+| 🗺️ **Learning Roadmap** | Weekly milestone timelines connecting courses, builds, and proof tasks | **Cached in DB** ($0 on revisit) |
+| 🎨 **Global Design System** | High-contrast Token-based Light Mode 🌞 & Dark Mode 🌙 switching | **Client-side** ($0) |
 
 ---
 
 ## 🏗️ System Architecture
 
+For full layer-by-layer documentation, view our [ARCHITECTURE.md](file:///Users/rajchaudhary/createmindai/CareerMind-A/ARCHITECTURE.md).
+
 ```mermaid
 graph TD
-    subgraph Client ["Client Side (React 18 + Tailwind v4 + Framer Motion)"]
-        UI["React SPA UI"]
-        Theme["ThemeContext (Light/Dark)"]
-        Auth["AuthContext (JWT State & XP/Streak)"]
-        Axios["Axios Client (Silent 401 Interceptor)"]
-    end
-
-    subgraph Backend ["Backend Core (Django REST Framework)"]
-        API["DRF API Controllers"]
-        JWT["SimpleJWT Authentication"]
-        PyPDF2["PyPDF2 Resume Parser"]
-    end
-
-    subgraph External ["External Services"]
-        Gemini["Google Gemini API (gemini-flash-latest)"]
-        GitHub["GitHub REST API"]
-    end
-
-    subgraph Database ["Persistence Layer"]
-        DB[("Supabase PostgreSQL / SQLite")]
-    end
-
-    UI --> Axios
-    Axios --> API
-    API --> JWT
-    API <--> DB
-    API --> PyPDF2
-    API <-->|"Cached AI Prompting"| Gemini
-    API <-->|"Public Profile & Events"| GitHub
+    User["Client Browser (React 18 + Tailwind v4 + Framer Motion)"] --> Interceptor["Axios Interceptor (Silent 401 JWT Refresh)"]
+    Interceptor --> DRF["Django REST Framework API Core"]
+    DRF --> ORM[("Supabase PostgreSQL / SQLite DB")]
+    DRF --> PyPDF2["PyPDF2 Resume Text Extractor"]
+    DRF <-->|"gemini-flash-latest API"| Gemini["Google Gemini AI Engine"]
+    DRF <-->|"Public Repos & Events"| GitHub["GitHub Public REST API"]
 ```
 
 ---
@@ -105,8 +62,8 @@ You can run SkillForge AI using either **Standard Local Setup** or **Docker Setu
 
 #### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/SkillForge-AI.git
-cd SkillForge-AI
+git clone https://github.com/XCHAUDHARY00/CareerMind-A.git
+cd CareerMind-A
 ```
 
 #### 2. Backend Setup (Django REST Framework)
@@ -161,17 +118,13 @@ Frontend app will run at: **`http://localhost:5173/`**
 
 ### Method B: Docker Setup (Recommended for Production / 1-Click Launch)
 
-#### Prerequisites
-- Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-
-#### Steps
 ```bash
-# In the root directory, create .env file
+# Create root .env file
 cat <<EOT > .env
 GEMINI_API_KEY=your_google_gemini_api_key_here
 EOT
 
-# Build and start both Backend & Frontend containers
+# Build and launch both Backend & Frontend containers
 docker-compose up --build
 ```
 - Access Frontend UI: **`http://localhost:5173`**
@@ -181,22 +134,25 @@ docker-compose up --build
 
 ## 📑 API Reference
 
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `POST` | `/api/register/` | Register new user account | No |
-| `POST` | `/api/login/` | JWT token login (`access` + `refresh`) | No |
-| `POST` | `/api/token/refresh/` | Refresh access token | No |
-| `GET` | `/api/myprofile/` | Fetch current user profile & dynamic stats | Yes |
-| `GET` | `/api/carrer-dna/` | Fetch or generate Career DNA analysis | Yes |
-| `GET` | `/api/skills_gap/` | Fetch or generate Skill Gap analysis | Yes |
-| `GET` | `/api/roadmap/` | Generate learning roadmap | Yes |
-| `POST` | `/api/github/link/` | Link GitHub username | Yes |
-| `GET` | `/api/github/analyze/` | Fetch GitHub repo stats & AI score (24h cache) | Yes |
-| `POST` | `/api/resume/upload/` | Upload PDF resume for PyPDF2 text extraction & Gemini scoring | Yes |
-| `GET` | `/api/resume/analysis/` | Get cached resume analysis | Yes |
-| `POST` | `/api/interview/start/` | Start AI mock interview session | Yes |
-| `POST` | `/api/interview/answer/` | Submit interview answer & receive AI evaluation | Yes |
-| `POST` | `/api/interview/end/` | End interview session & get final scorecard | Yes |
+| Method | Endpoint | Request Payload Example | Response Example / Details | Auth |
+|---|---|---|---|---|
+| `POST` | `/api/register/` | `{"username": "dev", "email": "a@b.com", "password": "xxx"}` | `{"status": "success", "tokens": {...}}` | No |
+| `POST` | `/api/login/` | `{"username": "dev", "password": "xxx"}` | `{"access": "ey...", "refresh": "ey..."}` | No |
+| `POST` | `/api/token/refresh/` | `{"refresh": "ey..."}` | `{"access": "ey..."}` | No |
+| `GET` | `/api/myprofile/` | *None* | User Profile object, `career_xp`, `streak`, `readiness_score` | Yes |
+| `PATCH` | `/api/profile/update/` | `{"bio": "Dev", "experience": "2 yrs"}` | `{"status": "success"}` | Yes |
+| `GET` | `/api/carrer-dna/` | *None* | Career DNA radar scores, role matches, AI summary | Yes |
+| `GET` | `/api/skills_gap/` | *None* | Skill gaps, priorities, required vs current levels | Yes |
+| `GET` | `/api/roadmap/` | *None* | 4-week step-by-step milestone learning plan | Yes |
+| `POST` | `/api/github/link/` | `{"username": "octocat"}` | `{"status": "success", "username": "octocat"}` | Yes |
+| `DELETE` | `/api/github/unlink/` | *None* | `{"status": "success"}` | Yes |
+| `GET` | `/api/github/analyze/` | *None (`?force=true` optional)* | Repos, stars, language breakdown, commit streak, AI rating | Yes |
+| `POST` | `/api/resume/upload/` | `multipart/form-data: resume (PDF)` | ATS readiness score, breakdown, AI improvement tips | Yes |
+| `GET` | `/api/resume/analysis/` | *None* | Cached resume ATS analysis | Yes |
+| `POST` | `/api/linkedin/link/` | `{"url": "https://linkedin.com/in/..."}` | `{"status": "success"}` | Yes |
+| `POST` | `/api/interview/start/` | `{"target_role": "Backend Developer", "difficulty": "Medium"}` | `{"session_id": 1, "first_question": "..."}` | Yes |
+| `POST` | `/api/interview/answer/` | `{"session_id": 1, "answer_text": "..."}` | `{"next_question": "...", "ai_feedback": "..."}` | Yes |
+| `POST` | `/api/interview/end/` | `{"session_id": 1}` | Final technical & communication score summary | Yes |
 
 ---
 

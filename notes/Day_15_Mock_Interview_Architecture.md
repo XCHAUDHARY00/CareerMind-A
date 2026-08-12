@@ -1,82 +1,139 @@
-# Day 15: AI Mock Interview Architecture & API Design
+# Day 15: AI Mock Interview Architecture & System Design 🎤
 
-Bhai, jaisa tune decide kiya hai, **Mock Interview ka backend code tu khud likhega!** 🔥 Yeh note tera guide hai. Isme hum API design, logic flow aur interview questions cover karenge taaki tu code likhte waqt clear rahe.
-
----
-
-## 🏗️ 1. Database Modeling (models.py)
-
-Tujhe Django me do models banane honge:
-
-1.  **`InterviewSession`**:
-    *   Jo ek particular interview ko track karega.
-    *   Fields: `user` (ForeignKey), `start_time`, `end_time`, `status` (ongoing, completed, terminated), `technical_score`, `communication_score`.
-2.  **`InterviewQuestion`**:
-    *   Ek session ke andar jitne questions puche gaye.
-    *   Fields: `session` (ForeignKey), `question_text` (Jo AI ne pucha), `user_answer` (Jo text browser ne bheja), `is_coding` (Boolean), `ai_feedback` (Sahi tha ya galat).
+## 📌 Context & Concept Summary
+Bhai, **Mock Interview AI** platform ka interactive flagship module hai. Yeh user se real-time technical questions puchta hai, audio/speech-to-text input receive karta hai, responses ko depth & clarity par score karta hai, aur dynamic follow-up questions generate karta hai.
 
 ---
 
-## 🔌 2. API Endpoints Design (views.py)
-
-Tujhe 3 APIs banani hain.
-
-### A. `POST /api/interview/start/`
-*   **Request:** `{ "target_role": "Backend Developer" }`
-*   **Action:** 
-    1. Ek naya `InterviewSession` DB me create kar.
-    2. Gemini AI ko prompt de: *"User is a Backend Developer. Ask the very first technical question to start the interview. Output ONLY the question."*
-    3. Ek `InterviewQuestion` create kar jisme AI ka question save ho.
-*   **Response:** `{ "session_id": 1, "first_question": "What is the difference between a process and a thread?" }`
-
-### B. `POST /api/interview/answer/`
-*   **Request:** `{ "session_id": 1, "answer_text": "A process has its own memory space..." }`
-*   **Action:**
-    1. `InterviewQuestion` me `user_answer` update kar.
-    2. Session check kar ki kitna time ho gaya hai aur kitne questions puch liye hain.
-    3. Gemini AI ko pichla question aur answer bhej, aur prompt de: *"Evaluate this answer out of 10. Also generate the NEXT question. If we have asked 5 theory questions, generate a coding question next."*
-    4. Pichle question ka `ai_feedback` save kar. Naya `InterviewQuestion` create kar naye question ke sath.
-*   **Response:** `{ "next_question": "Can you write a SQL query to find the second highest salary?", "is_coding": true }`
-
-### C. `POST /api/interview/end/`
-*   **Request:** `{ "session_id": 1 }`
-*   **Action:**
-    1. Session ko 'completed' mark kar.
-    2. Saare `InterviewQuestion` ko AI me bhej kar ek final rating (1-100) nikal technical aur communication ke liye.
-    3. Score ko `InterviewSession` me save kar de.
-*   **Response:** `{ "technical_score": 85, "communication_score": 75, "summary": "Good concepts but need practice in SQL." }`
+## 🛠️ Architecture Flow
+```
+[User Mic Input / Text] ──(Web Speech API)──> [Frontend State]
+                                                   │
+                                     POST /api/interview/answer/
+                                                   │
+[Django Backend] <─────────────────────────────────┘
+       │
+       ├──> Fetch previous session questions from DB (InterviewQuestion table)
+       ├──> Append context to Gemini Prompt ("Don't repeat past questions")
+       ├──> Call Gemini API (gemini-flash-latest)
+       └──> Save AI Feedback + Next Question to DB and return to Client
+```
 
 ---
 
-## 🎤 3. Frontend Web Speech API (Browser Native)
+## 💻 Database Models (`models.py`)
+```python
+class InterviewSession(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='interview_sessions')
+    target_role = models.CharField(max_length=100)
+    difficulty = models.CharField(max_length=50, default='Medium')
+    status = models.CharField(max_length=50, default='ongoing') # ongoing, completed
+    technical_score = models.IntegerField(null=True, blank=True)
+    communication_score = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-Frontend par tujhe koi third-party library nahi chahiye voice ke liye. Browser me natively `webkitSpeechRecognition` hota hai. 
-Jab frontend code likhega toh yeh flow hoga:
-1. User **"Hold to Speak"** dabayega.
-2. Mic on hoga, user bolega.
-3. Jab release karega, SpeechRecognition us audio ko text me dega.
-4. Wo text seedha `POST /api/interview/answer/` (API B) me chala jayega. 
+class InterviewQuestion(models.Model):
+    session = models.ForeignKey(InterviewSession, on_delete=models.CASCADE, related_name='questions')
+    question_text = models.TextField()
+    user_answer = models.TextField(null=True, blank=True)
+    ai_feedback = models.TextField(null=True, blank=True)
+    score = models.IntegerField(null=True, blank=True)
+```
+
+---
+
+## ❓ 10 In-Depth Technical Interview Questions & Answers
+
+### Q1: LLM ko stateless requests ke dauran interview ka context (memory) kaise diya jata hai taaki questions repeat na ho?
+**Detailed Answer (Bhai Language):** 
+Bhai, LLMs (Gemini/OpenAI) by default **Stateless** hote hain — matlab unhe har request me purani baatein yaad nahi rehti. Context maintain karne ke liye hum Database-driven Windowed Context pattern use karte hain:
+1. Jab user `POST /api/interview/answer/` hit karta hai, tab hum DB table `InterviewQuestion` se current `session_id` ke pichle saare questions aur answers fetch karte hain.
+2. System Instruction prompt me list append kar dete hain:
+   ```text
+   Previous Questions Asked in this Session:
+   1. What is GIL in Python? (User Answer: Global Interpreter Lock...)
+   2. Explain indexing in PostgreSQL. (User Answer: B-Tree index...)
+   
+   Instruction: Evaluate the last answer out of 100. Do NOT repeat any previous questions. Ask the NEXT technical question.
+   ```
+3. Iss tarah LLM har step par previous chat context dekh kar natural, non-repeating, progressive interview conduct karta hai.
 
 ---
 
-## 🧠 4. Interview Questions on This Architecture
-
-Yeh feature kaafi complex hai, toh interview me iske upar direct system design questions aa sakte hain.
-
-### Q1. How do you maintain the context (memory) of the interview so the AI doesn't repeat questions?
-**Answer:** "Har `POST /api/interview/answer/` call par main backend se us session ke pichle 2-3 questions aur answers nikal kar AI ke prompt me bhejunga (Prompt: 'Here is the chat history... don't ask these again. Ask the next question.'). Hum DB se history utha kar LLM ko context pass karte hain."
-
-### Q2. Why did you use the Browser's Web Speech API instead of sending audio to the backend?
-**Answer:** "Sending audio files over HTTP takes more bandwidth, increases latency (lag), and requires expensive backend STT (Speech-to-Text) models like Whisper. Browser's native API converts speech to text on the client-side for free, and I only send a tiny text payload to my backend. It's highly optimized for real-time web apps."
-
-### Q3. How do you prevent users from cheating (Googling answers)?
-**Answer:** "On the frontend, I enforce Fullscreen mode using the `Fullscreen API`. I also attach an event listener to the `visibilitychange` event. If `document.hidden` becomes true (meaning the user switched tabs or minimized the browser window), I fire a warning, and on the second attempt, I terminate the interview by calling the `/api/interview/end/` endpoint."
-
-### Q4. If the LLM takes 3-4 seconds to generate the next question, how do you handle the UX?
-**Answer:** "During the API call, the frontend shows a 'thinking...' skeleton or an AI animation. Since the AI evaluates the previous answer AND generates the next question in a single call, it's efficient, but to mask the delay, we use loading states."
-
-### Q5. What happens if the internet disconnects during the interview?
-**Answer:** "The session state is stored in the database. If a request fails, the frontend can catch the Axios error and show a 'Network Error: Retry' button. When the user retries, it sends the answer again to the same `session_id`."
+### Q2: Audio file server par bhejne ki jagah Browser Web Speech API (`webkitSpeechRecognition`) kyu use kiya?
+**Detailed Answer (Bhai Language):** 
+1. **Network Latency & Bandwidth**: Audio files (.mp3/.wav 5MB-10MB) send karne se network payload heavy hota hai aur round-trip time 3-5 seconds lag jata hai. Speech-to-Text browser-side execute karne par server par sirf tiny JSON string (`"My answer is..."`) pass hoti hai (latency drops to < 50ms).
+2. **Server Cost Optimization**: Backend par Whisper/Deepgram STT models run karna highly GPU-intensive aur expensive hota hai. Client-side browser native Web Speech API 100% free hoti hai!
 
 ---
-**Tera Task:** Ab tu backend me `models.py` aur `views.py` me APIs likhna shuru kar. Main tere questions/doubts solve karunga!
+
+### Q3: Anti-Cheating & Tab Switching Prevention Mechanism system me kaise works karta hai?
+**Detailed Answer (Bhai Language):** 
+Frontend JavaScript me HTML5 Page Visibility API attach hoti hai:
+```javascript
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    warningCount.current += 1;
+    alert("Warning: Tab switching is strictly prohibited during the AI Mock Interview!");
+    if (warningCount.current >= 2) {
+      autoTerminateInterviewSession();
+    }
+  }
+});
+```
+Agar candidate kisi aur tab par Google search karne jaata hai, to `document.hidden` flag `true` ho jaata hai, browser warning issue karta hai, aur 2nd attempt par session automatically terminate hokar scorecard save kar deta hai.
+
+---
+
+### Q4: LLM API call fail ya network drop hone par interview state corruption kaise roki jaati hai?
+**Detailed Answer (Bhai Language):** 
+Database Transactions (`@transaction.atomic`) aur Session Idempotency use karke:
+- User ka submit kiya hua answer DB me transaction open hone par pehle save hota hai.
+- Agar Gemini API call fail ya timeout (`HTTP 504`) hoti hai, to database changes rollback ho jaate hain ya question `pending` state me raheta hai.
+- Frontend Axios interceptor error catch karke user ko **"Retry Answer"** button dikhata hai without creating duplicate questions.
+
+---
+
+### Q5: Dynamic Question Difficulty Escalation (Adaptive Testing) kaise work karta hai?
+**Detailed Answer (Bhai Language):** 
+Agar Candidate pehle 2 questions ka answer high quality (>85/100) deta hai, to System Prompt dynamically difficulty adjust karta hai:
+$$\text{Next Difficulty} = \begin{cases} \text{Hard / Advanced Architecture}, & \text{if Avg Score } \ge 80 \\ \text{Medium / Core Logic}, & \text{if } 50 \le \text{Avg Score} < 80 \\ \text{Fundamental / Basic Concept}, & \text{if Avg Score } < 50 \end{cases}$$
+Isse candidate ki exact technical boundary accurately test ho jaati hai.
+
+---
+
+### Q6: Interview completion scorecard rating algorithm ($1-100$) kaise calculate hoti hai?
+**Detailed Answer (Bhai Language):** 
+Session ke end par (`/api/interview/end/`), backend DB se saare questions ke individual ratings fetch karke aggregate scores compute karta hai:
+$$\text{Technical Score} = \frac{1}{N} \sum_{i=1}^{N} \text{QuestionScore}_i$$
+$$\text{Communication Score} = \text{Gemini Evaluation}(\text{Vocabulary Depth}, \text{Conciseness}, \text{Clarity})$$
+
+---
+
+### Q7: Micro-Services Scaling me simultaneous thousands of mock interviews handling kaise hogi?
+**Detailed Answer (Bhai Language):** 
+Django WSGI request handlers ko **Asynchronous Task Queue (Celery + Redis)** me refactor karke. Fast API response return karke background worker thread me AI response process kiya jata hai, aur WebSockets (Django Channels) se client screen par stream kar diya jata hai.
+
+---
+
+### Q8: High-frequency API calls se Gemini Rate Limit Exhaustion kaise avoid hota hai?
+**Answer (Bhai Language):** 
+`gemini-flash-latest` model use karke jinki RPM (Requests Per Minute) quotas high hoti hai. Saath me backend User Rate Limiter (`30 requests/minute`) enforces limits per user session.
+
+---
+
+### Q9: Real-time Audio synthesis (AI Speaking back to User) kaise implement hota hai?
+**Answer (Bhai Language):** 
+Browser Native SpeechSynthesis API se:
+```javascript
+const utterance = new SpeechSynthesisUtterance(questionText);
+utterance.rate = 1.0;
+window.speechSynthesis.speak(utterance);
+```
+Isse AI Question screen par aate hi browser voice me auto-read karke bolta hai.
+
+---
+
+### Q10: Candidate response length truncation attack se database blowup kaise roka jata hai?
+**Answer (Bhai Language):** 
+DRF Serializer validator rule: `answer_text = serializers.CharField(max_length=2000)`. Max 2,000 chars accept kiye jaate hain, preventing oversized string memory injection.

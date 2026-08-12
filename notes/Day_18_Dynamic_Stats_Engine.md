@@ -14,16 +14,11 @@ $$\text{XP} = 250 + (\text{Skills} \times 50) + \text{GitHubLinked}(500) + \text
 GitHub public events API (`/users/{username}/events`) se distinct dates `YYYY-MM-DD` fetch karke current date se backwards consecutive activity count calculate hota hai.
 
 ### 3. Readiness Score:
-Base 50 + skills weightage (up to 25) + GitHub proof (10) + Resume proof (10) + AI Career DNA rating match.
+Base 50 + skills weightage (up to 25) + GitHub proof (10) + Resume proof (10) + AI Career DNA rating match (Capped at 98/100).
 
 ---
 
-## 💡 Real Life Analogy
-Socho ek RPG Game (jaise PUBG ya GTA). Aapke pass fixed level nahi hota. Jaise-jaise aap missions complete karte ho (Resume Upload = Mission 1, Mock Interview = Boss Fight), waise-waise aapka XP, Level (Readiness Score) aur Daily Login Streak continuously bump hota hai!
-
----
-
-## 💻 Backend Implementation (`serializers.py`)
+## 💻 Backend Serializer Implementation (`serializers.py`)
 ```python
 class UserProfileSerializer(serializers.ModelSerializer):
     career_xp = serializers.SerializerMethodField()
@@ -39,41 +34,106 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_streak(self, obj):
         if obj.github_username:
-            # Calculate consecutive commit dates from GitHub Events API
-            ...
-        return max(1, min(7, (datetime.date.today() - obj.user.date_joined.date()).days + 1))
+            try:
+                import requests, datetime
+                headers = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'SkillForgeAI'}
+                resp = requests.get(f'https://api.github.com/users/{obj.github_username}/events?per_page=100', headers=headers, timeout=3)
+                if resp.status_code == 200:
+                    events = resp.json()
+                    activity_dates = set(ev['created_at'][:10] for ev in events if isinstance(ev, dict) and 'created_at' in ev)
+                    if activity_dates:
+                        today = datetime.date.today()
+                        streak = 0
+                        curr = today
+                        if curr.isoformat() not in activity_dates:
+                            curr = today - datetime.timedelta(days=1)
+                        while curr.isoformat() in activity_dates:
+                            streak += 1
+                            curr -= datetime.timedelta(days=1)
+                        if streak > 0:
+                            return streak
+            except Exception:
+                pass
+        
+        import datetime
+        days_joined = (datetime.date.today() - obj.user.date_joined.date()).days + 1
+        return max(1, min(7, days_joined))
 ```
 
 ---
 
-## ❓ 10 Technical Interview Questions & Answers
+## ❓ 10 In-Depth Technical Interview Questions & Answers
 
-### Q1: `SerializerMethodField` DRF me kab use kiya jata hai?
-**Answer:** Jab DB model me koi field exist na karti ho, balki calculation/aggregation runtime par return karni ho, tab `SerializerMethodField()` use karte hain (`get_<field_name>` method ke saath).
+### Q1: DRF me `SerializerMethodField` dynamically output keys derive karne ke liye kaise work karta hai?
+**Detailed Answer (Bhai Language):** 
+`SerializerMethodField()` static database column map karne ki jagah runtime Python method invoke karta hai (`get_<field_name>(self, obj)`). `obj` parameter DB model instance (e.g. `UserProfile`) represent karta hai, jisse dynamic aggregation formulas compute hoke JSON payload me send hote hain.
 
-### Q2: Dynamic calculations har request par execute hone se performance degradation hoti hai?
-**Answer:** Heavy computation or third-party API call (jaise GitHub streak API) ke liye timeout limits (`timeout=3`) set karte hain, ya cached profile payload use karte hain.
+---
 
-### Q3: GitHub API timeout ya rate limit hone par streak algorithm ka behavior kya hota hai?
-**Answer:** Exception block catch hakar fallback learning streak calculate karta hai (days since joining), jisse frontend user experience block nahi hota.
+### Q2: Third-party HTTP calls `SerializerMethodField` me execute karne me performance risks kya hain aur timeouts kaise insulate karti hain?
+**Detailed Answer (Bhai Language):** 
+Jab client `/api/myprofile/` request bhejta hai, serializer execution thread user response block kar sakta hai. GitHub events fetch call me strict HTTP Timeout (`timeout=3`) set karna mandatory hai. Agar GitHub 3 seconds me respond nahi karta, catch block fallback value yield karta hai without blowing up the request.
 
-### Q4: GitHub events array me active contribution dates kaise extract kiye jaate hain?
-**Answer:** Set data structure me ISO timestamp strings ke pehle 10 characters (`created_at[:10]`) insert karke duplicate dates automatically remove ho jaate hain.
+---
 
-### Q5: Consecutive Streak calculation loop continuous dates kaise verify karta hai?
-**Answer:** Today's date check karta hai. Agar today activity nahi hai par yesterday thi, to yesterday se start karke `date - timedelta(days=1)` decrement loop tab tak chalta hai jab tak date Set me milti hai.
+### Q3: Set Data Structure GitHub contribution streak calculation algorithm ko $O(N)$ se $O(1)$ fast lookup kaise banata hai?
+**Detailed Answer (Bhai Language):** 
+Events Array me duplicate dates and unstructured timelines hote hain. Array me date search karna $O(N)$ linear time leta hai. Raw timestamps ko `created_at[:10]` extract karke `Set` me convert karne se Hash-table based $O(1)$ constant time lookup enable ho jata hai:
+```python
+while curr.isoformat() in activity_dates: # O(1) Lookup Speed!
+    streak += 1
+    curr -= datetime.timedelta(days=1)
+```
 
-### Q6: Readiness Score maximum kitna cap hona chahiye aur kyu?
-**Answer:** Score 95-98 par cap kiya jata hai, kyunki complete 100% readiness continuous learning context me realistic nahi hoti.
+---
 
-### Q7: User multiple skills delete kare to Career XP drop hona chahiye ya persist?
-**Answer:** Current state formula me skills drop hone par dynamic XP drop hota hai. Production me audit log table (`XPLog`) banayi ja sakti hai to record historical non-decreasing XP gains.
+### Q4: Sequential Date Decrement Loop (`curr -= datetime.timedelta(days=1)`) timezones across boundaries handled kaise rehti hai?
+**Detailed Answer (Bhai Language):** 
+GitHub Events API timestamps UTC ISO 8601 (`2026-08-12T10:00:00Z`) return karta hai. Local server timezone mismatch avoid karne ke liye dates UTC string format (`[:10]`) me match hone par consecutive calendar day chains evaluate hote hain.
 
-### Q8: N+1 query problem `SerializerMethodField` me relations count karte waqt kaise roki jaati hai?
-**Answer:** View queryset me `prefetch_related('skills', 'interview_sessions', 'user_educations')` add karke bulk SQL queries run hoti hain.
+---
 
-### Q9: Header XP & Streak badges full application UI refresh ke bina live update kaise hote hain?
-**Answer:** React AuthContext me `refreshUserProfile()` function implement kiya gaya hai jo internal state update hone par `/api/myprofile/` fire karke global context notify karta hai.
+### Q5: Career Readiness Score 95-98% par capping kyu zaroori hai?
+**Detailed Answer (Bhai Language):** 
+Software engineering landscape constantly evolve hota hai. 100% readiness rating candidate me false confidence build karti hai. System intentionally max cap 95% threshold maintain karta hai to signify continuous learning requirement.
 
-### Q10: Dynamic fields serialized output me automatic include hoti hain?
-**Answer:** Serializer class ke `Meta.fields` array list me `career_xp`, `streak`, `readiness_score` add karna padta hai.
+---
+
+### Q6: Database N+1 query problem `obj.skills.count()` serializer me call hone se kaise prevent karte hain?
+**Detailed Answer (Bhai Language):** 
+View controller level par ORM prefetching apply karke:
+```python
+profile = UserProfile.objects.prefetch_related('skills', 'interview_sessions', 'user_educations').get(user=request.user)
+```
+Isse serializer execution step individual sub-queries execute karne ki jagah pre-fetched in-memory cache utilize karta hai.
+
+---
+
+### Q7: User Auth Context Header Badges (`AppHeader`) dynamically global state me update kaise hote hain?
+**Detailed Answer (Bhai Language):** 
+React AuthContext provider `refreshUserProfile()` function expose karta hai. Jab user kisi page par skill add karta hai ya GitHub link karta hai, client application `await refreshUserProfile()` fire kar deta hai, jisse top header badges instant re-render me new XP and Streak values show karte hain.
+
+---
+
+### Q8: Daily Active User (DAU) learning streak fallback calculation days joined से kaise compute hota hai?
+**Detailed Answer (Bhai Language):** 
+Agar user GitHub account link nahi karta, system user ka registration timestamp (`user.date_joined`) check karta hai:
+```python
+days_joined = (datetime.date.today() - obj.user.date_joined.date()).days + 1
+return max(1, min(7, days_joined))
+```
+Isse initial onboarded candidates ka engagement streak zero nahi dikhta.
+
+---
+
+### Q9: Quantified Career XP values level-up progression System Design me kaise design kiya ja sakta hai?
+**Detailed Answer (Bhai Language):** 
+Exponential XP Threshold Formula:
+$$\text{Level}(XP) = \lfloor \sqrt{\frac{XP}{100}} \rfloor$$
+Isse baseline levels early achieve hote hain, while higher ranks (Level 5+) require completing AI mock interviews and uploading verified proof of work.
+
+---
+
+### Q10: Read-Heavy APIs par dynamic computational serializer execution CPU overhead kaise optimize karte hain?
+**Detailed Answer (Bhai Language):** 
+Pre-calculated summary columns ya Redis Cache Layer implement karke. Profile metadata write Operations (Skill update / GitHub link) par stats pre-calculate karke JSONField update kar diya jata hai. Read views direct DB JSON columns return karti hain without recalculating.
