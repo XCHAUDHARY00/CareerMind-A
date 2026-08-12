@@ -21,7 +21,7 @@ def generate_career_roadmap(user_profile):
     genai.configure(api_key=api_key)
     
     # 2. Gemini ka kaunsa model use karna hai?
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-flash-latest')
     
     # 3. User data ko format karo prompt ke liye
     skills = [skill.name for skill in user_profile.skills.all()]
@@ -118,7 +118,7 @@ def interact_with_career_coach(user_profile, new_message):
     
     # 5. Gemini Model initialize karo with System Instruction
     model = genai.GenerativeModel(
-        'gemini-2.5-flash',
+        'gemini-flash-latest',
         system_instruction=system_instruction
     )
     
@@ -155,7 +155,7 @@ def analyze_career_dna(user_profile):
     if not api_key:
         return {"error": "API Key missing"}
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-flash-latest')
 
     # User data prepare karo
     skills = [skill.name for skill in user_profile.skills.all()]
@@ -217,7 +217,7 @@ def analyze_skill_gaps(user_profile, target_role):
     if not api_key:
         return {"error": "API Key missing"}
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-flash-latest')
 
     # User ki skills fetch karo
     skills = [skill.name for skill in user_profile.skills.all()]

@@ -178,35 +178,40 @@ const Profile = () => {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-5"
+              className="rounded-2xl p-5 border"
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-card-border)' }}
             >
-              <h3 className="text-sm font-semibold text-white mb-4">Skills</h3>
+              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Skills</h3>
               <div className="flex flex-wrap gap-2">
-                {(profileData?.skills || mockSkills.slice(0, 8)).map((skill, i) => (
+                {(profileData?.skills || []).map((skill, i) => (
                   <span key={skill.id || i} className="px-2.5 py-1 bg-indigo-500/15 border border-indigo-500/25 rounded-lg text-[11px] text-indigo-300 font-medium">
                     {skill.name}
                   </span>
                 ))}
+                {(!profileData?.skills || profileData.skills.length === 0) && (
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No skills added yet.</p>
+                )}
               </div>
             </motion.div>
 
-            {/* Stats */}
+            {/* Real Stats */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-5"
+              className="rounded-2xl p-5 border"
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--bg-card-border)' }}
             >
-              <h3 className="text-sm font-semibold text-white mb-4">Career Stats</h3>
+              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Career Stats</h3>
               <div className="space-y-3">
                 {[
-                  { label: 'Readiness Score', value: '78/100', color: '#6366f1' },
-                  { label: 'Career XP', value: '2,840', color: '#f59e0b' },
-                  { label: 'Learning Streak', value: '7 days 🔥', color: '#f97316' },
-                  { label: 'Projects Built', value: '3', color: '#14b8a6' },
+                  { label: 'Readiness Score', value: `${profileData?.readiness_score || 65}/100`, color: '#6366f1' },
+                  { label: 'Career XP', value: `${(profileData?.career_xp || 250).toLocaleString()} XP`, color: '#8b5cf6' },
+                  { label: 'Learning Streak', value: `${profileData?.streak || 1} days 🔥`, color: '#f97316' },
+                  { label: 'GitHub Linked', value: profileData?.github_username ? `@${profileData.github_username}` : 'Not linked', color: profileData?.github_username ? '#10b981' : '#9898b0' },
                 ].map(stat => (
                   <div key={stat.label} className="flex items-center justify-between">
-                    <span className="text-xs text-[#55556a]">{stat.label}</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{stat.label}</span>
                     <span className="text-sm font-bold" style={{ color: stat.color }}>{stat.value}</span>
                   </div>
                 ))}

@@ -22,4 +22,19 @@ urlpatterns=[
     path('chat/history/', views.get_chat_history, name="chathistory"),
     path('carrer-dna/', views.carrer_dna, name="carrer_dna"),
     path('skills_gap/', views.skill_gaps, name="skills_gap"),
+    path('interview/start/', views.start_interview, name="start_interview"),
+    path('interview/answer/', views.submit_answer, name="submit_answer"),
+    path('interview/end/', views.end_interview, name="end_interview"),
+    path('interview/last/', views.get_last_interview, name="get_last_interview"),
+    # GitHub
+    path('github/link/', views.link_github, name="link_github"),
+    path('github/unlink/', views.unlink_github, name="unlink_github"),
+    path('github/analyze/', views.analyze_github, name="analyze_github"),
+    # Resume
+    path('resume/upload/', views.upload_resume, name="upload_resume"),
+    path('resume/analysis/', views.get_resume_analysis, name="get_resume_analysis"),
+    # LinkedIn
+    path('linkedin/link/', views.link_linkedin, name="link_linkedin"),
+    # Profile
+    path('profile/update/', views.update_my_profile, name="update_my_profile"),
 ]

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Public pages
@@ -41,8 +42,9 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
@@ -68,8 +70,9 @@ function App() {
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
 
       {/* Dev tools — sirf development mein dikhti hai, production mein automatically remove */}
       <ReactQueryDevtools initialIsOpen={false} />

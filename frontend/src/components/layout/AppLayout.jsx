@@ -4,10 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Dna, Zap, Map, BookOpen, Briefcase,
   Mic, FolderGit2, GitBranch, FileText, User, Settings,
-  ChevronLeft, ChevronRight, HelpCircle, LogOut, Sparkles, X, Menu
+  ChevronLeft, ChevronRight, HelpCircle, LogOut, Sparkles, X, Menu,
+  Sun, Moon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { mockUser } from '../../data/mockData';
+import { useTheme } from '../../context/ThemeContext';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -29,7 +30,7 @@ const bottomItems = [
 
 const Logo = ({ collapsed }) => (
   <div className="flex items-center gap-2.5 overflow-hidden">
-    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 glow-indigo">
+    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 via-violet-600 to-teal-400 flex items-center justify-center flex-shrink-0 glow-indigo shadow-lg">
       <Sparkles size={16} className="text-white" />
     </div>
     <AnimatePresence>
@@ -39,10 +40,10 @@ const Logo = ({ collapsed }) => (
           animate={{ opacity: 1, width: 'auto' }}
           exit={{ opacity: 0, width: 0 }}
           transition={{ duration: 0.2 }}
-          className="font-bold text-sm text-white whitespace-nowrap overflow-hidden"
-          style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+          className="font-bold text-sm whitespace-nowrap overflow-hidden"
+          style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-primary)' }}
         >
-          CareerMind <span className="gradient-text">AI</span>
+          SkillForge <span className="gradient-text">AI</span>
         </motion.span>
       )}
     </AnimatePresence>
@@ -57,14 +58,17 @@ const NavItem = ({ item, collapsed }) => {
       className={({ isActive }) =>
         `group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
           isActive
-            ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/20'
-            : 'text-[#9898b0] hover:text-white hover:bg-white/5 border border-transparent'
+            ? 'bg-indigo-500/15 border border-indigo-500/25'
+            : 'border border-transparent'
         }`
       }
+      style={({ isActive }) => ({
+        color: isActive ? 'var(--accent-indigo)' : 'var(--text-secondary)',
+      })}
     >
       {({ isActive }) => (
         <>
-          <Icon size={18} className={`flex-shrink-0 transition-colors ${isActive ? 'text-indigo-400' : ''}`} />
+          <Icon size={18} className="flex-shrink-0 transition-colors" />
           <AnimatePresence>
             {!collapsed && (
               <motion.span
@@ -78,13 +82,16 @@ const NavItem = ({ item, collapsed }) => {
               </motion.span>
             )}
           </AnimatePresence>
-          {/* Active dot indicator */}
+          {/* Active indicator */}
           {isActive && (
             <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-indigo-400" />
           )}
           {/* Tooltip for collapsed */}
           {collapsed && (
-            <div className="absolute left-full ml-3 px-2 py-1 bg-[#1a1a25] border border-[#2a2a38] rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity shadow-xl">
+            <div
+              className="absolute left-full ml-3 px-2 py-1 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity shadow-xl border"
+              style={{ background: 'var(--bg-secondary)', borderColor: 'var(--bg-card-border)', color: 'var(--text-primary)' }}
+            >
               {item.label}
             </div>
           )}
@@ -98,7 +105,10 @@ const NavItem = ({ item, collapsed }) => {
 const MobileNav = () => {
   const topItems = navItems.slice(0, 5);
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1a1a25] glass-strong md:hidden">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 border-t md:hidden"
+      style={{ background: 'var(--header-bg)', borderColor: 'var(--sidebar-border)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+    >
       <div className="flex items-center justify-around px-2 py-2">
         {topItems.map((item) => {
           const Icon = item.icon;
@@ -107,10 +117,11 @@ const MobileNav = () => {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
-                  isActive ? 'text-indigo-400' : 'text-[#55556a]'
-                }`
+                `flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all`
               }
+              style={({ isActive }) => ({
+                color: isActive ? 'var(--accent-indigo)' : 'var(--text-muted)',
+              })}
             >
               <Icon size={20} />
               <span className="text-[10px] font-medium">{item.label.split(' ')[0]}</span>
@@ -119,11 +130,10 @@ const MobileNav = () => {
         })}
         <NavLink
           to="/profile"
-          className={({ isActive }) =>
-            `flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
-              isActive ? 'text-indigo-400' : 'text-[#55556a]'
-            }`
-          }
+          className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--accent-indigo)' : 'var(--text-muted)',
+          })}
         >
           <User size={20} />
           <span className="text-[10px] font-medium">Profile</span>
@@ -135,20 +145,22 @@ const MobileNav = () => {
 
 const Sidebar = ({ collapsed, setCollapsed }) => {
   const { logout, user } = useAuth();
-  const displayName = user?.user?.username || mockUser.firstName;
+  const displayName = user?.user?.username || user?.username || 'User';
 
   return (
     <motion.aside
       animate={{ width: collapsed ? 64 : 220 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className="hidden md:flex flex-col h-screen bg-[#0d0d12] border-r border-[#1a1a25] flex-shrink-0 overflow-hidden relative z-30"
+      style={{ background: 'var(--sidebar-bg)', borderColor: 'var(--sidebar-border)' }}
+      className="hidden md:flex flex-col h-screen border-r flex-shrink-0 overflow-hidden relative z-30"
     >
       {/* Logo */}
-      <div className="flex items-center justify-between px-4 py-5 border-b border-[#1a1a25]">
+      <div className="flex items-center justify-between px-4 py-5 border-b" style={{ borderColor: 'var(--sidebar-border)' }}>
         <Logo collapsed={collapsed} />
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-[#55556a] hover:text-white hover:bg-white/5 transition-all"
+          className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md transition-all"
+          style={{ color: 'var(--text-muted)' }}
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
@@ -162,7 +174,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-[#1a1a25] mx-4" />
+      <div className="h-px mx-4" style={{ background: 'var(--sidebar-border)' }} />
 
       {/* Bottom items */}
       <div className="py-4 px-2 space-y-1">
@@ -171,9 +183,9 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         ))}
 
         {/* User + Logout */}
-        <div className={`mt-2 flex items-center gap-3 px-3 py-2 rounded-xl border border-[#1a1a25] overflow-hidden`}>
+        <div className={`mt-2 flex items-center gap-3 px-3 py-2 rounded-xl border overflow-hidden`} style={{ borderColor: 'var(--sidebar-border)' }}>
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-            {displayName?.[0]?.toUpperCase() || 'R'}
+            {displayName?.[0]?.toUpperCase() || 'U'}
           </div>
           <AnimatePresence>
             {!collapsed && (
@@ -183,15 +195,16 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                 exit={{ opacity: 0, width: 0 }}
                 className="flex-1 min-w-0 overflow-hidden"
               >
-                <p className="text-xs font-semibold text-white truncate">{displayName}</p>
-                <p className="text-[10px] text-[#55556a] truncate">Backend Dev path</p>
+                <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{displayName}</p>
+                <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>Backend Dev path</p>
               </motion.div>
             )}
           </AnimatePresence>
           {!collapsed && (
             <button
               onClick={logout}
-              className="flex-shrink-0 text-[#55556a] hover:text-red-400 transition-colors"
+              className="flex-shrink-0 hover:text-red-400 transition-colors"
+              style={{ color: 'var(--text-muted)' }}
               title="Logout"
             >
               <LogOut size={14} />
@@ -207,34 +220,56 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 const AppHeader = ({ title, subtitle }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { logout, user } = useAuth();
-  const displayName = user?.user?.username || mockUser.firstName;
+  const { theme, toggleTheme } = useTheme();
+  const displayName = user?.user?.username || user?.username || 'User';
 
   return (
     <>
-      <header className="flex items-center justify-between px-6 py-4 border-b border-[#1a1a25] glass-strong sticky top-0 z-20">
+      <header className="flex items-center justify-between px-6 py-4 border-b sticky top-0 z-20"
+        style={{ background: 'var(--header-bg)', borderColor: 'var(--sidebar-border)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)' }}
+      >
         <div className="flex items-center gap-4">
           {/* Mobile menu button */}
           <button
-            className="md:hidden text-[#9898b0] hover:text-white transition-colors"
+            className="md:hidden transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             <Menu size={20} />
           </button>
           <div>
-            {title && <h1 className="text-base font-semibold text-white">{title}</h1>}
-            {subtitle && <p className="text-xs text-[#55556a]">{subtitle}</p>}
+            {title && <h1 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h1>}
+            {subtitle && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>}
           </div>
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Real Career XP */}
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
             <span className="text-indigo-400 text-xs font-semibold">XP</span>
-            <span className="text-white text-xs font-bold">2,840</span>
+            <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>
+              {((user?.career_xp || user?.data?.career_xp || 250)).toLocaleString()}
+            </span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 rounded-lg border border-orange-500/20">
+
+          {/* Real Learning / GitHub Streak */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 rounded-lg border border-orange-500/20" title={user?.github_username ? "GitHub Contribution Streak" : "Learning Streak"}>
             <span className="text-orange-400 text-sm">🔥</span>
-            <span className="text-white text-xs font-bold">7</span>
+            <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>
+              {user?.streak || user?.data?.streak || 1}d
+            </span>
           </div>
+
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            id="theme-toggle-btn"
+            className="w-8 h-8 rounded-lg flex items-center justify-center border transition-all hover:scale-105"
+            style={{ borderColor: 'var(--bg-card-border)', background: 'var(--bg-card)', color: 'var(--text-secondary)' }}
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
         </div>
       </header>
 
@@ -290,11 +325,11 @@ const AppLayout = ({ children, title, subtitle }) => {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen bg-[#050508] overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <AppHeader title={title} subtitle={subtitle} />
-        <main className="flex-1 overflow-y-auto pb-20 md:pb-6">
+        <main className="flex-1 overflow-y-auto pb-20 md:pb-6" style={{ background: 'var(--bg-primary)' }}>
           {children}
         </main>
       </div>

@@ -27,6 +27,16 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const refreshUserProfile = async () => {
+    try {
+      const res = await api.get('/myprofile/');
+      if (res.data?.data) {
+        setUser(res.data.data);
+        return res.data.data;
+      }
+    } catch (e) {}
+  };
+
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -40,10 +50,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('refresh_token', tokens.refresh);
     setIsAuthenticated(true);
     if (userData) setUser(userData);
+    refreshUserProfile();
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, isAuthenticated, isLoading, login, logout, refreshUserProfile }}>
       {children}
     </AuthContext.Provider>
   );
