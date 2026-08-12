@@ -99,7 +99,13 @@ def delete_profile(request,pk):
 def register(request):
     serializer=UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
+        user = serializer.save()
+        try:
+            from .email_service import send_welcome_email
+            send_welcome_email(user)
+        except Exception as e:
+            import sys
+            print(f"Failed to send welcome email: {e}", file=sys.stderr)
         return Response({
             "status":"success",
             "message":"user created successfully",
@@ -916,17 +922,127 @@ def update_my_profile(request):
             setattr(profile, field, request.data[field])
             update_fields.append(field)
     
-    # Update username if provided
+    # Update username or email if provided
+    old_username = request.user.username
+    old_email = request.user.email
+    credentials_updated = False
+    change_type = None
+    old_val = None
+    new_val = None
+
     if 'username' in request.data:
         new_username = request.data['username'].strip()
-        if new_username and new_username != request.user.username:
+        if new_username and new_username != old_username:
             from django.contrib.auth.models import User
             if not User.objects.filter(username=new_username).exclude(pk=request.user.pk).exists():
                 request.user.username = new_username
                 request.user.save(update_fields=['username'])
+                credentials_updated = True
+                change_type = 'username'
+                old_val = old_username
+                new_val = new_username
+                
+    if 'email' in request.data:
+        new_email = request.data['email'].strip()
+        if new_email and new_email != old_email:
+            from django.contrib.auth.models import User
+            if not User.objects.filter(email=new_email).exclude(pk=request.user.pk).exists():
+                request.user.email = new_email
+                request.user.save(update_fields=['email'])
+                credentials_updated = True
+                change_type = 'email'
+                old_val = old_email
+                new_val = new_email
+                
+    if credentials_updated:
+        try:
+            from .email_service import send_credential_update_email
+            send_credential_update_email(request.user, change_type, old_val, new_val)
+        except Exception as e:
+            import sys
+            print(f"Failed to send credential update email: {e}", file=sys.stderr)
     
     if update_fields:
         profile.save(update_fields=update_fields)
     
     serializer = UserProfileSerializer(profile)
     return Response({"status": "success", "message": "Profile updated", "data": serializer.data})
+
+
+import random
+from django.utils import timezone
+from datetime import timedelta
+from .models import PasswordResetOTP
+
+@api_view(['POST'])
+def request_password_reset(request):
+    """Generates a 6-digit OTP and sends it via email for password recovery."""
+    email_or_username = request.data.get('email', '').strip() or request.data.get('username', '').strip()
+    if not email_or_username:
+        return Response({"status": "error", "message": "Email or username is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    from django.contrib.auth.models import User
+    user = User.objects.filter(email=email_or_username).first() or User.objects.filter(username=email_or_username).first()
+    
+    if user and user.email:
+        # Generate a secure random 6-digit code
+        otp = str(random.randint(100000, 999999))
+        
+        # Save OTP to database
+        PasswordResetOTP.objects.filter(user=user, is_used=False).update(is_used=True)  # Invalidate old OTPs
+        PasswordResetOTP.objects.create(user=user, otp=otp)
+        
+        # Send Email
+        try:
+            from .email_service import send_password_reset_email
+            email_sent = send_password_reset_email(user, otp)
+            if not email_sent:
+                return Response({"status": "error", "message": "Failed to send email. Please try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            import sys
+            print(f"Error sending password reset email: {e}", file=sys.stderr)
+            return Response({"status": "error", "message": f"SMTP/Mail Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        return Response({"status": "success", "message": "Password reset code sent to registered email address."})
+        
+    return Response({"status": "error", "message": "No active account found with this email or username."}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+def confirm_password_reset(request):
+    """Verifies the 6-digit OTP and resets the user's password."""
+    email_or_username = request.data.get('email', '').strip() or request.data.get('username', '').strip()
+    otp = request.data.get('otp', '').strip()
+    new_password = request.data.get('new_password', '').strip()
+    
+    if not email_or_username or not otp or not new_password:
+        return Response({"status": "error", "message": "Email/username, verification code, and new password are required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    from django.contrib.auth.models import User
+    user = User.objects.filter(email=email_or_username).first() or User.objects.filter(username=email_or_username).first()
+    
+    if not user:
+        return Response({"status": "error", "message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    # Check OTP in database
+    otp_record = PasswordResetOTP.objects.filter(user=user, otp=otp, is_used=False).order_by('-created_at').first()
+    
+    if not otp_record:
+        return Response({"status": "error", "message": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    # Check expiry (15 minutes)
+    if timezone.now() > otp_record.created_at + timedelta(minutes=15):
+        otp_record.is_used = True
+        otp_record.save(update_fields=['is_used'])
+        return Response({"status": "error", "message": "Verification code has expired"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    # Reset password
+    user.set_password(new_password)
+    user.save()
+    
+    # Mark OTP as used
+    otp_record.is_used = True
+    otp_record.save(update_fields=['is_used'])
+    
+    return Response({"status": "success", "message": "Password has been reset successfully. You can now login with your new password."})
+

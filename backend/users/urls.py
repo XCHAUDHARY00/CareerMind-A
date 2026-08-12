@@ -37,4 +37,7 @@ urlpatterns=[
     path('linkedin/link/', views.link_linkedin, name="link_linkedin"),
     # Profile
     path('profile/update/', views.update_my_profile, name="update_my_profile"),
+    # Password Reset
+    path('password/reset/', views.request_password_reset, name="request_password_reset"),
+    path('password/reset/confirm/', views.confirm_password_reset, name="confirm_password_reset"),
 ]

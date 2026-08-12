@@ -143,3 +143,14 @@ class InterviewQuestion(models.Model):
     def __str__(self):
         return f"Q for Session {self.session.id}: {self.question_text[:30]}..."
 
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_otps")
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.otp}"
+
+
