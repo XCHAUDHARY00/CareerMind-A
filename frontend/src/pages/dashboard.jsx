@@ -114,11 +114,12 @@ const Dashboard = () => {
         const p = profileRes.data.data;
         setProfileData(p);
 
-        // Show gold streak animation exactly once a day per device if they have a streak
+        // Show gold streak animation exactly once a day per user on this device if they have a streak
         const todayStr = new Date().toISOString().split('T')[0];
-        if (p.streak > 0 && localStorage.getItem('lastStreakShownDate') !== todayStr) {
+        const storageKey = `lastStreakShownDate_${p.id}`;
+        if (p.streak > 0 && localStorage.getItem(storageKey) !== todayStr) {
           setShowStreakAnimation(true);
-          localStorage.setItem('lastStreakShownDate', todayStr);
+          localStorage.setItem(storageKey, todayStr);
           setTimeout(() => setShowStreakAnimation(false), 3000);
         }
 
