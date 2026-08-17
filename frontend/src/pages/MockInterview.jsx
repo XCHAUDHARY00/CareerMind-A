@@ -39,7 +39,7 @@ const MockInterview = () => {
   const [codeOutput, setCodeOutput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [language, setLanguage] = useState('python');
-  const [timeLeft, setTimeLeft] = useState(120);
+  const [timeLeft, setTimeLeft] = useState(600);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -157,7 +157,7 @@ const MockInterview = () => {
         setCurrentQuestionText(response.data.first_question);
         setIsCoding(response.data.is_coding);
         setCurrentQ(0);
-        setTimeLeft(120);
+        setTimeLeft(response.data.is_coding ? 600 : 120);
         setAnswer('');
         setCodeOutput('');
         setPhase('active');
@@ -176,9 +176,7 @@ const MockInterview = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const finalAnswer = (isCoding && codeOutput) 
-        ? `${answer}\n\n--- Code Output ---\n${codeOutput}` 
-        : answer;
+      const finalAnswer = answer;
         
       const response = await api.post('/interview/answer/', {
         session_id: sessionId,
@@ -201,7 +199,7 @@ const MockInterview = () => {
           setCurrentQ(q => q + 1);
           setAnswer('');
           setCodeOutput('');
-          setTimeLeft(120);
+          setTimeLeft(response.data.is_coding ? 600 : 120);
         }
       } else {
         setError(response.data.message || "Failed to submit answer.");
@@ -223,27 +221,7 @@ const MockInterview = () => {
     }, 50);
   };
 
-  const handleRunCode = async () => {
-    setIsExecuting(true);
-    setCodeOutput('Running code...\n');
-    try {
-      const response = await fetch('https://emkc.org/api/v2/piston/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          language: language === 'python' ? 'python' : 'javascript',
-          version: language === 'python' ? '3.10.0' : '18.15.0',
-          files: [{ content: answer }]
-        })
-      });
-      const data = await response.json();
-      setCodeOutput(data.run?.output || data.message || 'No output generated.');
-    } catch (err) {
-      setCodeOutput('Error executing code: ' + err.message);
-    } finally {
-      setIsExecuting(false);
-    }
-  };
+
 
   if (phase === 'result') {
     return (
@@ -405,17 +383,12 @@ const MockInterview = () => {
                   <option value="python">Python 3.10</option>
                   <option value="javascript">Node.js</option>
                 </select>
-                <button
-                  onClick={handleRunCode}
-                  disabled={isExecuting || !answer.trim()}
-                  className="px-3 py-1 bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/30 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 disabled:opacity-50"
-                >
-                  {isExecuting ? <Loader size={12} className="animate-spin" /> : <Play size={12} />}
-                  Run Code
-                </button>
+                <div className="text-[10px] text-[#55556a]">
+                  Syntax highlighting enabled
+                </div>
               </div>
               
-              <div className="border border-[#1a1a25] rounded-xl overflow-hidden h-[250px]">
+              <div className="border border-[#1a1a25] rounded-xl overflow-hidden h-[300px]">
                 <Editor
                   height="100%"
                   language={language}
@@ -426,12 +399,7 @@ const MockInterview = () => {
                 />
               </div>
               
-              {codeOutput && (
-                <div className="bg-black border border-[#1a1a25] rounded-xl p-3 h-[100px] overflow-y-auto font-mono text-xs text-gray-300">
-                  <div className="text-[#55556a] mb-1 uppercase text-[9px] tracking-wider font-bold">Terminal Output</div>
-                  <pre className="whitespace-pre-wrap">{codeOutput}</pre>
-                </div>
-              )}
+
             </div>
           ) : (
             <textarea
