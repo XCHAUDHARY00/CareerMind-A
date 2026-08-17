@@ -217,23 +217,6 @@ const Login = () => {
             </motion.button>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-[#1a1a25]" />
-            <span className="text-xs text-[#55556a]">or</span>
-            <div className="flex-1 h-px bg-[#1a1a25]" />
-          </div>
-
-          {/* Google (visual only) */}
-          <button
-            type="button"
-            className="w-full flex items-center justify-center gap-2 py-3 border border-[#1a1a25] bg-[#0d0d12] hover:bg-[#111118] rounded-xl text-sm text-[#9898b0] hover:text-white transition-all"
-          >
-            <div className="w-4 h-4 relative">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-500 via-yellow-400 via-green-400 to-blue-500 opacity-80" style={{backgroundImage: 'conic-gradient(from 0deg, #4285f4 0%, #34a853 25%, #fbbc04 50%, #ea4335 75%, #4285f4 100%)'}} />
-            </div>
-            Continue with Google
-          </button>
         </motion.div>
       </div>
     </div>

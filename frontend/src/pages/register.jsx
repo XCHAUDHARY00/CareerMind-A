@@ -55,6 +55,14 @@ const Register = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match.');
       return;
