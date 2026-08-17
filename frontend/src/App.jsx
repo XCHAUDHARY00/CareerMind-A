@@ -69,7 +69,7 @@ function App() {
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
 
             {/* Catch all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
           </BrowserRouter>
         </AuthProvider>
