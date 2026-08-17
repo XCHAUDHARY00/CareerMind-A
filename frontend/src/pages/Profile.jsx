@@ -87,11 +87,9 @@ const Profile = () => {
     if (!eduForm.course.trim() || !eduForm.institution.trim() || !eduForm.start_date) return;
     try {
       const res = await api.post('/addeducation/', eduForm);
-      if (res.data?.data) {
-        setProfileData(prev => ({
-          ...prev,
-          user_educations: [...(prev.user_educations || []), res.data.data]
-        }));
+      if (res.data?.data || res.data?.status === 'success') {
+        // Refetch fully from database to prevent duplicate display bugs
+        fetchProfile();
         setEduForm({ course: '', institution: '', start_date: '', end_date: '' });
         setIsAddingEdu(false);
       }
@@ -103,10 +101,8 @@ const Profile = () => {
   const handleDeleteEdu = async (eduId) => {
     try {
       await api.delete(`/education/${eduId}/`);
-      setProfileData(prev => ({
-        ...prev,
-        user_educations: (prev.user_educations || []).filter(e => e.id !== eduId)
-      }));
+      // Refetch fully from database to prevent state mismatch
+      fetchProfile();
     } catch (err) {
       console.error(err);
     }

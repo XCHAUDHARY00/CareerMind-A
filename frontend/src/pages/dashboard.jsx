@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView, AnimatePresence } from 'framer-motion';
 import {
   TrendingUp, Zap, FolderGit2, Mic, ArrowRight,
   Sparkles, Target, Clock, CheckCircle, ChevronRight,
@@ -100,6 +100,7 @@ const Dashboard = () => {
   const [careerPaths, setCareerPaths] = useState([]);
   const [roadmapWeek1, setRoadmapWeek1] = useState([]);
   const [interviewResult, setInterviewResult] = useState(null);
+  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
 
   useEffect(() => {
     loadDashboard();
@@ -112,6 +113,13 @@ const Dashboard = () => {
       if (profileRes.data?.data) {
         const p = profileRes.data.data;
         setProfileData(p);
+
+        // Show streak animation if GitHub streak exists and not shown yet this session
+        if (p.streak > 0 && !sessionStorage.getItem('streakShown')) {
+          setShowStreakAnimation(true);
+          sessionStorage.setItem('streakShown', 'true');
+          setTimeout(() => setShowStreakAnimation(false), 4000);
+        }
 
         // Load from cached profile fields if available
         if (p.skill_gaps_data?.skill_gaps) {
@@ -515,6 +523,21 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+
+      <AnimatePresence>
+        {showStreakAnimation && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.8 }}
+            className="fixed bottom-24 right-6 sm:bottom-10 sm:right-10 z-50 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 rounded-full font-bold shadow-xl shadow-orange-500/20 flex items-center gap-2"
+          >
+            <span className="text-2xl">🔥</span>
+            <span>+1 GitHub Streak! Keep going!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AIAssistant />
     </AppLayout>
