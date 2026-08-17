@@ -96,10 +96,10 @@ const Register = () => {
   };
 
   const fields = [
-    { id: 'first_name', label: 'First Name', type: 'text', placeholder: 'Raj', half: true },
-    { id: 'last_name', label: 'Last Name', type: 'text', placeholder: 'Chaudhary', half: true },
-    { id: 'username', label: 'Username', type: 'text', placeholder: 'rajchaudhary', icon: <User size={14} /> },
-    { id: 'email', label: 'Email', type: 'email', placeholder: 'raj@example.com', icon: <Mail size={14} /> },
+    { id: 'first_name', label: 'First Name', type: 'text', placeholder: 'Enter your first name', half: true },
+    { id: 'last_name', label: 'Last Name', type: 'text', placeholder: 'Enter your last name', half: true },
+    { id: 'username', label: 'Username', type: 'text', placeholder: 'Enter a username', icon: <User size={14} /> },
+    { id: 'email', label: 'Email', type: 'email', placeholder: 'Enter your email', icon: <Mail size={14} /> },
   ];
 
   return (
