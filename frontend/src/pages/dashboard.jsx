@@ -114,11 +114,10 @@ const Dashboard = () => {
         const p = profileRes.data.data;
         setProfileData(p);
 
-        // Show streak animation if GitHub streak exists and not shown yet this session
-        if (p.streak > 0 && !sessionStorage.getItem('streakShown')) {
+        // Show gold streak animation if streak was just updated today
+        if (profileRes.data.streak_updated) {
           setShowStreakAnimation(true);
-          sessionStorage.setItem('streakShown', 'true');
-          setTimeout(() => setShowStreakAnimation(false), 4000);
+          setTimeout(() => setShowStreakAnimation(false), 2000);
         }
 
         // Load from cached profile fields if available
@@ -531,10 +530,11 @@ const Dashboard = () => {
             initial={{ opacity: 0, y: 50, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.8 }}
-            className="fixed bottom-24 right-6 sm:bottom-10 sm:right-10 z-50 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 rounded-full font-bold shadow-xl shadow-orange-500/20 flex items-center gap-2"
+            className="fixed bottom-24 right-6 sm:bottom-10 sm:right-10 z-50 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-600 text-white px-6 py-3 rounded-full font-extrabold shadow-2xl shadow-yellow-500/40 flex items-center gap-3 border border-yellow-300/30"
           >
-            <span className="text-2xl">🔥</span>
-            <span>+1 GitHub Streak! Keep going!</span>
+            <span className="text-2xl animate-bounce">✨</span>
+            <span className="tracking-wide">+1 Daily Login Streak!</span>
+            <span className="text-2xl animate-bounce">🔥</span>
           </motion.div>
         )}
       </AnimatePresence>

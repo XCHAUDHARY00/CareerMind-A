@@ -21,11 +21,29 @@ def get_profiles(request):
 @permission_classes([IsAuthenticated])
 def my_profile(request):
     try:
+        import datetime
         profile = request.user.profile
+        
+        today = datetime.date.today()
+        streak_updated = False
+        
+        if profile.last_app_login != today:
+            if profile.last_app_login == today - datetime.timedelta(days=1):
+                # Consecutive day login
+                profile.app_login_streak += 1
+            else:
+                # First time or missed a day
+                profile.app_login_streak = 1
+                
+            profile.last_app_login = today
+            profile.save(update_fields=['app_login_streak', 'last_app_login'])
+            streak_updated = True
+
         serializer = UserProfileSerializer(profile)
         return Response({
             "status": "success",
-            "data": serializer.data
+            "data": serializer.data,
+            "streak_updated": streak_updated
         }, status=status.HTTP_200_OK)
     except UserProfile.DoesNotExist:
         return Response({

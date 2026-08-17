@@ -40,31 +40,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return 250 + (skills_count * 50) + has_github + has_resume + (interviews_count * 300) + (educations_count * 100) + (goals_count * 100)
 
     def get_streak(self, obj):
-        if obj.github_username:
-            try:
-                import requests, datetime
-                headers = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'CareerMindAI'}
-                resp = requests.get(f'https://api.github.com/users/{obj.github_username}/events?per_page=100', headers=headers, timeout=3)
-                if resp.status_code == 200:
-                    events = resp.json()
-                    activity_dates = set(ev['created_at'][:10] for ev in events if isinstance(ev, dict) and 'created_at' in ev)
-                    if activity_dates:
-                        today = datetime.date.today()
-                        streak = 0
-                        curr = today
-                        if curr.isoformat() not in activity_dates:
-                            curr = today - datetime.timedelta(days=1)
-                        while curr.isoformat() in activity_dates:
-                            streak += 1
-                            curr -= datetime.timedelta(days=1)
-                        if streak > 0:
-                            return streak
-            except Exception:
-                pass
-        
-        import datetime
-        days_joined = (datetime.date.today() - obj.user.date_joined.date()).days + 1
-        return max(1, min(7, days_joined))
+        return obj.app_login_streak
 
     def get_readiness_score(self, obj):
         if obj.career_dna_data and 'readiness_score' in obj.career_dna_data:

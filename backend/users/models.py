@@ -34,6 +34,10 @@ class UserProfile(models.Model):
     resume_filename = models.CharField(max_length=200, blank=True, null=True)
     resume_analysis = models.JSONField(null=True, blank=True)   # Gemini analysis result
 
+    # App Login Streak
+    app_login_streak = models.IntegerField(default=0)
+    last_app_login = models.DateField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
