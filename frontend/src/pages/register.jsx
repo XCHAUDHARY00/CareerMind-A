@@ -95,12 +95,7 @@ const Register = () => {
     }
   };
 
-  const fields = [
-    { id: 'first_name', label: 'First Name', type: 'text', placeholder: 'Enter your first name', half: true },
-    { id: 'last_name', label: 'Last Name', type: 'text', placeholder: 'Enter your last name', half: true },
-    { id: 'username', label: 'Username', type: 'text', placeholder: 'Enter a username', icon: <User size={14} /> },
-    { id: 'email', label: 'Email', type: 'email', placeholder: 'Enter your email', icon: <Mail size={14} /> },
-  ];
+
 
   return (
     <div className="min-h-screen bg-[#050508] flex items-center justify-center px-6 py-12 bg-grid">
@@ -157,7 +152,7 @@ const Register = () => {
                     required
                     value={form[field]}
                     onChange={e => update(field, e.target.value)}
-                    placeholder={field === 'first_name' ? 'Raj' : 'Chaudhary'}
+                    placeholder={field === 'first_name' ? 'Enter first name' : 'Enter last name'}
                     className="w-full bg-[#111118] border border-[#1a1a25] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#55556a] focus:outline-none focus:border-indigo-500/60 transition-all"
                   />
                 </div>
@@ -174,7 +169,7 @@ const Register = () => {
                   required
                   value={form.username}
                   onChange={e => update('username', e.target.value)}
-                  placeholder="rajchaudhary"
+                  placeholder="Enter username"
                   className="w-full bg-[#111118] border border-[#1a1a25] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-[#55556a] focus:outline-none focus:border-indigo-500/60 transition-all"
                 />
               </div>
@@ -190,7 +185,7 @@ const Register = () => {
                   required
                   value={form.email}
                   onChange={e => update('email', e.target.value)}
-                  placeholder="raj@example.com"
+                  placeholder="Enter email"
                   className="w-full bg-[#111118] border border-[#1a1a25] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-[#55556a] focus:outline-none focus:border-indigo-500/60 transition-all"
                 />
               </div>
@@ -206,7 +201,7 @@ const Register = () => {
                   required
                   value={form.password}
                   onChange={e => update('password', e.target.value)}
-                  placeholder="Min 8 characters"
+                  placeholder="Enter password (Min 8 chars)"
                   className="w-full bg-[#111118] border border-[#1a1a25] rounded-xl pl-9 pr-10 py-2.5 text-sm text-white placeholder-[#55556a] focus:outline-none focus:border-indigo-500/60 transition-all"
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#55556a] hover:text-[#9898b0] transition-colors">
