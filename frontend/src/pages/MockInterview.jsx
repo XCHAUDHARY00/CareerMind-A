@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Editor from '@monaco-editor/react';
 import { Mic, Play, Timer, ChevronRight, Star, MessageSquare, TrendingUp, Loader, AlertCircle } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import AIAssistant from '../components/ai/AIAssistant';
@@ -35,6 +36,9 @@ const MockInterview = () => {
   const [currentQuestionText, setCurrentQuestionText] = useState('');
   const [isCoding, setIsCoding] = useState(false);
   const [answer, setAnswer] = useState('');
+  const [codeOutput, setCodeOutput] = useState('');
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [language, setLanguage] = useState('python');
   const [timeLeft, setTimeLeft] = useState(120);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -155,6 +159,7 @@ const MockInterview = () => {
         setCurrentQ(0);
         setTimeLeft(120);
         setAnswer('');
+        setCodeOutput('');
         setPhase('active');
       } else {
         setError(response.data.message || "Failed to start interview.");
@@ -171,9 +176,13 @@ const MockInterview = () => {
     setIsLoading(true);
     setError(null);
     try {
+      const finalAnswer = (isCoding && codeOutput) 
+        ? `${answer}\n\n--- Code Output ---\n${codeOutput}` 
+        : answer;
+        
       const response = await api.post('/interview/answer/', {
         session_id: sessionId,
-        answer_text: answer
+        answer_text: finalAnswer
       });
       if (response.data.status === 'success') {
         if (response.data.completed) {
@@ -191,6 +200,7 @@ const MockInterview = () => {
           setIsCoding(response.data.is_coding);
           setCurrentQ(q => q + 1);
           setAnswer('');
+          setCodeOutput('');
           setTimeLeft(120);
         }
       } else {
@@ -206,10 +216,33 @@ const MockInterview = () => {
 
   const handleSkipQuestion = () => {
     setAnswer('[Skipped]');
+    setCodeOutput('');
     // Submit as skipped
     setTimeout(() => {
       handleNextQuestion();
     }, 50);
+  };
+
+  const handleRunCode = async () => {
+    setIsExecuting(true);
+    setCodeOutput('Running code...\n');
+    try {
+      const response = await fetch('https://emkc.org/api/v2/piston/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: language === 'python' ? 'python' : 'javascript',
+          version: language === 'python' ? '3.10.0' : '18.15.0',
+          files: [{ content: answer }]
+        })
+      });
+      const data = await response.json();
+      setCodeOutput(data.run?.output || data.message || 'No output generated.');
+    } catch (err) {
+      setCodeOutput('Error executing code: ' + err.message);
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   if (phase === 'result') {
@@ -359,48 +392,86 @@ const MockInterview = () => {
               </div>
             </div>
 
+          </motion.div>
+
+          {isCoding ? (
+            <div className="flex flex-col gap-3 mb-4">
+              <div className="flex justify-between items-center">
+                <select 
+                  value={language} 
+                  onChange={e => setLanguage(e.target.value)}
+                  className="bg-[#111118] border border-[#1a1a25] text-xs text-white rounded-lg px-2 py-1 outline-none"
+                >
+                  <option value="python">Python 3.10</option>
+                  <option value="javascript">Node.js</option>
+                </select>
+                <button
+                  onClick={handleRunCode}
+                  disabled={isExecuting || !answer.trim()}
+                  className="px-3 py-1 bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/30 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 disabled:opacity-50"
+                >
+                  {isExecuting ? <Loader size={12} className="animate-spin" /> : <Play size={12} />}
+                  Run Code
+                </button>
+              </div>
+              
+              <div className="border border-[#1a1a25] rounded-xl overflow-hidden h-[250px]">
+                <Editor
+                  height="100%"
+                  language={language}
+                  theme="vs-dark"
+                  value={answer}
+                  onChange={val => setAnswer(val || '')}
+                  options={{ minimap: { enabled: false }, fontSize: 13, padding: { top: 16 } }}
+                />
+              </div>
+              
+              {codeOutput && (
+                <div className="bg-black border border-[#1a1a25] rounded-xl p-3 h-[100px] overflow-y-auto font-mono text-xs text-gray-300">
+                  <div className="text-[#55556a] mb-1 uppercase text-[9px] tracking-wider font-bold">Terminal Output</div>
+                  <pre className="whitespace-pre-wrap">{codeOutput}</pre>
+                </div>
+              )}
+            </div>
+          ) : (
             <textarea
-              id={isCoding ? "coding-answer-input" : "interview-answer-input"}
+              id="interview-answer-input"
               value={answer}
               onChange={e => setAnswer(e.target.value)}
               disabled={isLoading}
-              placeholder={
-                isCoding
-                  ? "Write your code snippet or function here..."
-                  : "Type your answer here... Or use the Speak button below to talk."
-              }
+              placeholder="Type your answer here... Or use the Speak button below to talk."
               rows={6}
-              className="w-full bg-[#111118] border border-[#1a1a25] rounded-xl px-4 py-3 text-sm text-white placeholder-[#55556a] focus:outline-none focus:border-indigo-500/60 transition-all resize-none font-mono"
+              className="w-full bg-[#111118] border border-[#1a1a25] rounded-xl px-4 py-3 text-sm text-white placeholder-[#55556a] focus:outline-none focus:border-indigo-500/60 transition-all resize-none mb-4"
             />
+          )}
 
-            {/* Voice Input Controls */}
-            {!isCoding && (
-              <div className="flex flex-col gap-2 mt-4">
-                <div className="flex items-center gap-3">
-                  <button
-                    id="interview-speak-btn"
-                    type="button"
-                    onMouseDown={startListening}
-                    onMouseUp={stopListening}
-                    onTouchStart={startListening}
-                    onTouchEnd={stopListening}
-                    disabled={isLoading}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all select-none ${
-                      isListening
-                        ? 'bg-red-500/20 border border-red-500/40 text-red-300 scale-95 shadow-lg shadow-red-500/10'
-                        : 'bg-[#111118] border border-[#1a1a25] text-[#9898b0] hover:text-white hover:border-[#2a2a38] active:scale-95'
-                    }`}
-                  >
-                    <Mic size={14} className={isListening ? "animate-pulse text-red-400" : ""} />
-                    {isListening ? "Listening... Release to stop" : "Hold to Speak Answer"}
-                  </button>
-                </div>
-                {speechError && (
-                  <p className="text-[10px] text-red-400">{speechError}</p>
-                )}
+          {/* Voice Input Controls */}
+          {!isCoding && (
+            <div className="flex flex-col gap-2 mb-4">
+              <div className="flex items-center gap-3">
+                <button
+                  id="interview-speak-btn"
+                  type="button"
+                  onMouseDown={startListening}
+                  onMouseUp={stopListening}
+                  onTouchStart={startListening}
+                  onTouchEnd={stopListening}
+                  disabled={isLoading}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all select-none ${
+                    isListening
+                      ? 'bg-red-500/20 border border-red-500/40 text-red-300 scale-95 shadow-lg shadow-red-500/10'
+                      : 'bg-[#111118] border border-[#1a1a25] text-[#9898b0] hover:text-white hover:border-[#2a2a38] active:scale-95'
+                  }`}
+                >
+                  <Mic size={14} className={isListening ? "animate-pulse text-red-400" : ""} />
+                  {isListening ? "Listening... Release to stop" : "Hold to Speak Answer"}
+                </button>
               </div>
-            )}
-          </motion.div>
+              {speechError && (
+                <p className="text-[10px] text-red-400">{speechError}</p>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button
