@@ -114,10 +114,12 @@ const Dashboard = () => {
         const p = profileRes.data.data;
         setProfileData(p);
 
-        // Show gold streak animation if streak was just updated today
-        if (profileRes.data.streak_updated) {
+        // Show gold streak animation exactly once a day per device if they have a streak
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (p.streak > 0 && localStorage.getItem('lastStreakShownDate') !== todayStr) {
           setShowStreakAnimation(true);
-          setTimeout(() => setShowStreakAnimation(false), 2000);
+          localStorage.setItem('lastStreakShownDate', todayStr);
+          setTimeout(() => setShowStreakAnimation(false), 3000);
         }
 
         // Load from cached profile fields if available
