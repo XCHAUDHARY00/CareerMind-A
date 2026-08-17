@@ -226,7 +226,7 @@ const MockInterview = () => {
   if (phase === 'result') {
     return (
       <AppLayout title="Interview Result" subtitle="Your performance breakdown">
-        <div className="p-6 max-w-3xl mx-auto">
+        <div className="p-4 sm:p-6 max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -302,7 +302,7 @@ const MockInterview = () => {
   if (phase === 'active') {
     return (
       <AppLayout title="Mock Interview" subtitle="Be confident. Take your time.">
-        <div className="p-6 max-w-3xl mx-auto">
+        <div className="p-4 sm:p-6 max-w-3xl mx-auto">
           {/* Error Banner */}
           {error && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-xs text-red-400">
@@ -312,8 +312,8 @@ const MockInterview = () => {
           )}
 
           {/* Timer + progress */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2 px-3 py-2 bg-[#0d0d12] border border-[#1a1a25] rounded-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#0d0d12] border border-[#1a1a25] rounded-xl self-start sm:self-auto">
               <Timer size={14} className="text-indigo-400" />
               <span className="text-sm font-bold text-white">
                 {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
@@ -441,7 +441,7 @@ const MockInterview = () => {
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               id="interview-submit-btn"
               onClick={handleNextQuestion}
@@ -473,7 +473,7 @@ const MockInterview = () => {
 
   return (
     <AppLayout title="Mock Interview" subtitle="Practice with AI. Get real feedback.">
-      <div className="p-6 max-w-3xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
         {/* Error Banner */}
         {error && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-xs text-red-400">
@@ -492,9 +492,9 @@ const MockInterview = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-4 mb-6 flex items-center gap-4"
+            className="bg-[#0d0d12] border border-[#1a1a25] rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"
           >
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
               <Star size={16} className="text-indigo-400" />
             </div>
             <div>
@@ -577,7 +577,7 @@ const MockInterview = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="mt-5 grid grid-cols-3 gap-3"
+          className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3"
         >
           {[
             { icon: <MessageSquare size={14} />, label: 'Use the STAR method for behavioral questions' },
