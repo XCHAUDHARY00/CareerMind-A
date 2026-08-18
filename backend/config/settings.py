@@ -38,13 +38,16 @@ ALLOWED_HOSTS = ['*', '.onrender.com', 'localhost', '127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'channels',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'users',
+    'battles',
     #register restframework
     'rest_framework',
     'corsheaders',
@@ -81,6 +84,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 
 DATABASE_URL = os.getenv('DATABASE_URL', '').strip().strip('\'"')

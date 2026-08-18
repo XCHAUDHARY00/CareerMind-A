@@ -1,39 +1,79 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import { 
   Terminal, Play, Clock, 
   Trophy, Zap, Swords,
-  AlertCircle, X, TrendingUp
+  AlertCircle, X, TrendingUp, HelpCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const CodingBattle = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
-  // States for the UI
+  // Game States
+  const [battleState, setBattleState] = useState('lobby'); // lobby, waiting, playing, finished
+  const [gameMode, setGameMode] = useState('coding'); // coding, quiz
+  const [roomCode, setRoomCode] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  
+  // Play States
   const [code, setCode] = useState('def twoSum(nums, target):\n    # Write your highly optimized code here\n    pass');
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes (300 seconds)
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [battleState, setBattleState] = useState('waiting'); // waiting, playing, finished
+  const [timeLeft, setTimeLeft] = useState(300); // 5 mins
   const [winner, setWinner] = useState(null);
+  const [opponent, setOpponent] = useState(null);
+  
+  // WebSocket Reference
+  const ws = useRef(null);
 
-  // Simulated Opponent Data
+  // My Player Data
   const me = {
-    name: 'You (Player 1)',
+    name: user?.user?.username || user?.username || 'You (Player 1)',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=6366f1',
     level: 42,
-    xp: 2540,
-    color: '#6366f1' // Indigo
+    xp: user?.career_xp || 2540,
+    color: '#6366f1'
   };
 
-  const opponent = {
-    name: 'ShadowCoder99',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
-    level: 45,
-    xp: 2890,
-    color: '#ef4444' // Red
-  };
+  // Setup WebSocket when entering waiting/playing state
+  useEffect(() => {
+    if ((battleState === 'waiting' || battleState === 'playing') && roomCode) {
+      ws.current = new WebSocket(`ws://localhost:8000/ws/battle/${roomCode}/`);
+
+      ws.current.onopen = () => {
+        console.log('Connected to Battle Server');
+        // Tell server I joined
+        ws.current.send(JSON.stringify({ type: 'player_join', player: me.name }));
+      };
+
+      ws.current.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        console.log('Message from server:', data);
+
+        if (data.action === 'player_join' && data.player !== me.name) {
+          // Opponent joined!
+          setOpponent({
+            name: data.player,
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
+            level: 45,
+            xp: 2890,
+            color: '#ef4444'
+          });
+          // Start match
+          setBattleState('playing');
+        } else if (data.action === 'match_finished') {
+          setBattleState('finished');
+          setWinner(data.winner);
+        }
+      };
+
+      return () => {
+        if (ws.current) ws.current.close();
+      };
+    }
+  }, [battleState, roomCode]);
 
   // Timer logic
   useEffect(() => {
@@ -48,40 +88,100 @@ const CodingBattle = () => {
     return () => clearInterval(timer);
   }, [battleState, timeLeft]);
 
-  // Format time (MM:SS)
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Start match after a small delay (Simulating opponent join)
-  useEffect(() => {
-    if (battleState === 'waiting') {
-      const timeout = setTimeout(() => {
-        setBattleState('playing');
-      }, 3000); // 3 seconds wait
-      return () => clearTimeout(timeout);
-    }
-  }, [battleState]);
-
   const handleTimeUp = () => {
-    setBattleState('finished');
-    setWinner(opponent.name); // Opponent wins by default if time runs out
+    if (ws.current) {
+      ws.current.send(JSON.stringify({ type: 'submit_code', player: opponent?.name || 'Draw' }));
+    }
   };
 
   const handleSubmit = () => {
     if (battleState !== 'playing') return;
-    
-    setIsSubmitting(true);
-    
-    // Simulate AI checking code delay
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setBattleState('finished');
-      setWinner(me.name); // You win for submitting first in this dummy logic!
-    }, 2500);
+    if (ws.current) {
+      ws.current.send(JSON.stringify({ type: 'submit_code', player: me.name }));
+    }
   };
+
+  const generateRoomCode = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
+  const handleCreateRoom = (mode) => {
+    setGameMode(mode);
+    setRoomCode(generateRoomCode());
+    setBattleState('waiting');
+  };
+
+  const handleJoinRoom = () => {
+    if (joinCode.length > 0) {
+      setRoomCode(joinCode.toUpperCase());
+      setBattleState('waiting');
+    }
+  };
+
+  // LOBBY UI
+  if (battleState === 'lobby') {
+    return (
+      <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="absolute top-0 w-full h-96 bg-indigo-500/10 blur-[100px] pointer-events-none" />
+        
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="z-10 max-w-2xl w-full">
+          <div className="text-center mb-10">
+            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/20">
+              <Swords size={40} className="text-white" />
+            </div>
+            <h1 className="text-4xl font-bold font-sans tracking-tight mb-3">Multiplayer Arena</h1>
+            <p className="text-gray-400">Challenge friends or random opponents to test your skills.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Create Room - Coding */}
+            <button 
+              onClick={() => handleCreateRoom('coding')}
+              className="bg-[#11111a] border border-white/10 hover:border-indigo-500/50 p-6 rounded-2xl text-left transition-all hover:-translate-y-1 group"
+            >
+              <Terminal size={28} className="text-indigo-400 mb-4 group-hover:scale-110 transition-transform" />
+              <h3 className="text-xl font-bold mb-2">Play Coding</h3>
+              <p className="text-sm text-gray-400">1v1 real-time DSA algorithms battle.</p>
+              <div className="mt-4 text-xs font-bold text-indigo-400 uppercase tracking-wider">Create Room &rarr;</div>
+            </button>
+
+            {/* Create Room - Quiz */}
+            <button 
+              onClick={() => handleCreateRoom('quiz')}
+              className="bg-[#11111a] border border-white/10 hover:border-emerald-500/50 p-6 rounded-2xl text-left transition-all hover:-translate-y-1 group"
+            >
+              <HelpCircle size={28} className="text-emerald-400 mb-4 group-hover:scale-110 transition-transform" />
+              <h3 className="text-xl font-bold mb-2">Play Quiz</h3>
+              <p className="text-sm text-gray-400">Fast-paced MCQ battle on CS concepts.</p>
+              <div className="mt-4 text-xs font-bold text-emerald-400 uppercase tracking-wider">Create Room &rarr;</div>
+            </button>
+          </div>
+
+          <div className="bg-[#11111a] border border-white/10 p-6 rounded-2xl flex items-center gap-4">
+            <input 
+              type="text" 
+              placeholder="Enter Room Code (e.g. X7B9K2)" 
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 uppercase font-mono"
+            />
+            <button 
+              onClick={handleJoinRoom}
+              className="bg-white text-black px-8 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+            >
+              Join Room
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // UI Components
   const PlayerCard = ({ player, isOpponent }) => (
@@ -132,12 +232,12 @@ const CodingBattle = () => {
       {/* Top Navbar */}
       <header className="h-16 border-b border-white/10 bg-[#0f0f13] flex items-center justify-between px-6 z-10 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-500/20 p-2 rounded-lg border border-indigo-500/30">
-            <Swords size={20} className="text-indigo-400" />
+          <div className={`p-2 rounded-lg border ${gameMode === 'coding' ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}>
+            {gameMode === 'coding' ? <Terminal size={20} /> : <HelpCircle size={20} />}
           </div>
           <div>
-            <h1 className="font-bold text-md tracking-wide">1v1 RANKED BATTLE</h1>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider font-mono">Room ID: #X7B9K2</p>
+            <h1 className="font-bold text-md tracking-wide uppercase">1v1 {gameMode} BATTLE</h1>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider font-mono">Room ID: #{roomCode}</p>
           </div>
         </div>
 
@@ -150,7 +250,10 @@ const CodingBattle = () => {
         </div>
 
         <button 
-          onClick={() => navigate('/dashboard')}
+          onClick={() => {
+            if (ws.current) ws.current.close();
+            setBattleState('lobby');
+          }}
           className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/5"
         >
           <X size={16} /> Flee Battle
@@ -177,7 +280,10 @@ const CodingBattle = () => {
               >
                 <div className="w-20 h-20 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-6" />
                 <h2 className="text-3xl font-bold mb-2">Waiting for Opponent...</h2>
-                <p className="text-gray-400 font-mono">Share Room ID: X7B9K2</p>
+                <div className="bg-white/10 px-6 py-3 rounded-xl border border-white/20 flex flex-col items-center mt-4">
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Share this code with your friend</p>
+                  <p className="text-3xl font-mono font-bold text-indigo-400">{roomCode}</p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -203,7 +309,7 @@ const CodingBattle = () => {
                 </h1>
                 
                 <p className="text-xl text-gray-300 mb-8">
-                  {winner === me.name ? 'Your code was optimal and faster!' : 'Opponent submitted a better solution.'}
+                  {winner === me.name ? 'You crushed your opponent!' : `${winner} won the battle.`}
                 </p>
                 
                 <div className="flex gap-4">
@@ -213,7 +319,10 @@ const CodingBattle = () => {
                     </div>
                   )}
                   <button 
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => {
+                      if (ws.current) ws.current.close();
+                      setBattleState('lobby');
+                    }}
                     className="bg-white text-black px-8 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
                   >
                     Return to Lobby
@@ -223,67 +332,96 @@ const CodingBattle = () => {
             )}
           </AnimatePresence>
 
-          {/* Problem Description Bar */}
-          <div className="bg-[#15151e] border-b border-white/10 p-4">
-            <h2 className="text-lg font-bold text-indigo-400 flex items-center gap-2">
-              <Terminal size={18} /> Two Sum Problem
-            </h2>
-            <p className="text-sm text-gray-400 mt-1 line-clamp-1">
-              Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
-            </p>
-          </div>
-
-          {/* Monaco Editor */}
-          <div className="flex-1 relative">
-            <Editor
-              height="100%"
-              defaultLanguage="python"
-              theme="vs-dark"
-              value={code}
-              onChange={(value) => setCode(value)}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 16,
-                padding: { top: 20 },
-                scrollBeyondLastLine: false,
-                fontFamily: "'JetBrains Mono', 'Fira Code', monospace"
-              }}
-            />
-          </div>
-
-          {/* Bottom Action Bar */}
-          <div className="bg-[#15151e] border-t border-white/10 p-4 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-md text-xs font-mono text-gray-400 flex items-center gap-2">
-                <AlertCircle size={14} /> Python 3.10
+          {gameMode === 'coding' ? (
+            <>
+              {/* Problem Description Bar */}
+              <div className="bg-[#15151e] border-b border-white/10 p-4">
+                <h2 className="text-lg font-bold text-indigo-400 flex items-center gap-2">
+                  <Terminal size={18} /> Two Sum Problem
+                </h2>
+                <p className="text-sm text-gray-400 mt-1 line-clamp-1">
+                  Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
+                </p>
               </div>
-            </div>
 
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting || battleState !== 'playing'}
-              className={`relative overflow-hidden group flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg
-                ${isSubmitting ? 'bg-indigo-600/50 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-0.5'}
-              `}
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  AI Evaluating...
-                </>
-              ) : (
-                <>
+              {/* Monaco Editor */}
+              <div className="flex-1 relative">
+                <Editor
+                  height="100%"
+                  defaultLanguage="python"
+                  theme="vs-dark"
+                  value={code}
+                  onChange={(value) => setCode(value)}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 16,
+                    padding: { top: 20 },
+                    scrollBeyondLastLine: false,
+                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace"
+                  }}
+                />
+              </div>
+
+              {/* Bottom Action Bar */}
+              <div className="bg-[#15151e] border-t border-white/10 p-4 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-md text-xs font-mono text-gray-400 flex items-center gap-2">
+                    <AlertCircle size={14} /> Python 3.10
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={battleState !== 'playing'}
+                  className={`relative overflow-hidden group flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-0.5`}
+                >
                   <Play size={18} className="fill-current" />
                   Submit Code
-                </>
-              )}
-            </button>
-          </div>
+                </button>
+              </div>
+            </>
+          ) : (
+            // Quiz Mode UI
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0d0d12]">
+              <div className="w-full max-w-3xl">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-8 mb-6 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2 block">Question 1 of 5</span>
+                  <h2 className="text-2xl font-bold mb-6 leading-relaxed">
+                    Which data structure uses LIFO (Last In First Out) principle?
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {['Queue', 'Stack', 'Linked List', 'Array'].map((opt, i) => (
+                      <button key={i} className="bg-black/50 hover:bg-white/10 border border-white/10 hover:border-emerald-500/50 p-4 rounded-xl text-left font-medium transition-all group flex items-center justify-between">
+                        {opt}
+                        <div className="w-5 h-5 rounded-full border-2 border-white/20 group-hover:border-emerald-500" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                   <button
+                    onClick={handleSubmit}
+                    disabled={battleState !== 'playing'}
+                    className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/30 hover:-translate-y-0.5`}
+                  >
+                    Submit Answer &rarr;
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Side: Player 2 */}
         <aside className="w-64 flex-shrink-0 flex flex-col justify-center hidden md:flex">
-          <PlayerCard player={opponent} isOpponent={true} />
+          {opponent ? (
+            <PlayerCard player={opponent} isOpponent={true} />
+          ) : (
+            <div className="h-[300px] border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center p-6 text-center">
+              <p className="text-gray-500">Waiting for Opponent...</p>
+            </div>
+          )}
         </aside>
 
       </main>

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Dna, Zap, Map, BookOpen, Briefcase,
   Mic, FolderGit2, GitBranch, FileText, User, Settings,
   ChevronLeft, ChevronRight, HelpCircle, LogOut, Sparkles, X, Menu,
-  Sun, Moon
+  Sun, Moon, Swords
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -21,6 +21,7 @@ const navItems = [
   { path: '/projects', icon: FolderGit2, label: 'Projects' },
   { path: '/github', icon: GitBranch, label: 'GitHub' },
   { path: '/resume', icon: FileText, label: 'Resume' },
+  { path: '/battle', icon: Swords, label: '1v1 Battle' },
 ];
 
 const bottomItems = [
