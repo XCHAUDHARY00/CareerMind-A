@@ -15,13 +15,13 @@ const navItems = [
   { path: '/career-dna', icon: Dna, label: 'Career DNA' },
   { path: '/skill-gaps', icon: Zap, label: 'Skill Gaps' },
   { path: '/roadmap', icon: Map, label: 'Roadmap' },
+  { path: '/battle', icon: Swords, label: '1v1 Battle' },
   { path: '/courses', icon: BookOpen, label: 'Courses' },
   { path: '/jobs', icon: Briefcase, label: 'Jobs' },
   { path: '/mock-interview', icon: Mic, label: 'Mock Interview' },
   { path: '/projects', icon: FolderGit2, label: 'Projects' },
   { path: '/github', icon: GitBranch, label: 'GitHub' },
   { path: '/resume', icon: FileText, label: 'Resume' },
-  { path: '/battle', icon: Swords, label: '1v1 Battle' },
 ];
 
 const bottomItems = [
