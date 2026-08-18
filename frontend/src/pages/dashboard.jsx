@@ -5,7 +5,7 @@ import {
   TrendingUp, Zap, FolderGit2, Mic, ArrowRight,
   Sparkles, Target, Clock, CheckCircle, ChevronRight,
   AlertTriangle, BookOpen, GitBranch, FileText, Map, Dna,
-  Briefcase, Loader2
+  Briefcase, Loader2, Swords
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import AIAssistant from '../components/ai/AIAssistant';
@@ -173,6 +173,7 @@ const Dashboard = () => {
     { label: 'GitHub', icon: GitBranch, path: '/github', color: '#f59e0b', emoji: '🐙', desc: 'Code intelligence' },
     { label: 'Resume', icon: FileText, path: '/resume', color: '#ec4899', emoji: '📄', desc: 'AI resume analysis' },
     { label: 'Mock Interview', icon: Mic, path: '/mock-interview', color: '#f97316', emoji: '🎤', desc: 'Practice interviews' },
+    { label: '1v1 Battle', icon: Swords, path: '/battle', color: '#ff4b4b', emoji: '⚔️', desc: 'Live coding match' },
   ];
 
   if (isLoading) {

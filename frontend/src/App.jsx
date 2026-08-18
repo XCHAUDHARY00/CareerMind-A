@@ -26,6 +26,7 @@ import Resume from './pages/Resume';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Chat from './pages/chat';
+import CodingBattle from './pages/CodingBattle';
 
 // ─── Global React Query client ────────────────────────────────────────────────
 // Ek baar banao → poori app mein share hota hai
@@ -67,6 +68,7 @@ function App() {
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+            <Route path="/battle" element={<ProtectedRoute><CodingBattle /></ProtectedRoute>} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/login" replace />} />
