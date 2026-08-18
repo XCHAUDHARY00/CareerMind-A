@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import {
   Sparkles, ChevronRight, ArrowRight, Zap, Map, Briefcase,
   Mic, GitBranch, Brain, TrendingUp, Target, Star, Check, FileText,
-  FolderGit2, BookOpen, Sun, Moon, Shield, Award, Play, Terminal
+  FolderGit2, BookOpen, Sun, Moon, Shield, Award, Play, Terminal, Swords
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -66,6 +66,7 @@ const Landing = () => {
     { id: 'interview', label: 'Mock Interview AI', icon: Mic, color: '#f97316' },
     { id: 'projects', label: 'AI Projects', icon: FolderGit2, color: '#10b981' },
     { id: 'roadmap', label: 'Learning Roadmap', icon: Map, color: '#3b82f6' },
+    { id: 'battle', label: '1v1 Battle Arena', icon: Swords, color: '#ef4444' },
   ];
 
   return (
@@ -411,6 +412,45 @@ const Landing = () => {
                 </div>
               </motion.div>
             )}
+
+            {/* 8. 1V1 BATTLE ARENA */}
+            {activeTab === 'battle' && (
+              <motion.div key="battle" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3 }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <span className="text-xs text-red-400 font-semibold uppercase tracking-wider">Multiplayer Gamification</span>
+                  <h3 className="text-xl font-bold mt-1 mb-3">Real-Time 1v1 Battles</h3>
+                  <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
+                    Challenge your friends to live coding races or fast-paced CS quizzes. Watch their progress in real-time, win matches, and climb the global leaderboard.
+                  </p>
+                  <button onClick={() => navigate('/register')} className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-semibold">
+                    Create Match Room
+                  </button>
+                </div>
+                <div className="p-4 rounded-2xl border bg-[#09090d] text-white space-y-4">
+                  <div className="flex justify-between items-center px-2">
+                     <div className="flex items-center gap-2">
+                       <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=6366f1" className="w-8 h-8 rounded-full" />
+                       <span className="text-xs font-bold">You (Lvl 42)</span>
+                     </div>
+                     <span className="text-xl font-black italic text-red-500 font-mono">VS</span>
+                     <div className="flex items-center gap-2">
+                       <span className="text-xs font-bold">Rival (Lvl 45)</span>
+                       <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444" className="w-8 h-8 rounded-full" />
+                     </div>
+                  </div>
+                  <div className="bg-gray-900 rounded-xl p-3 border border-gray-800 text-center relative overflow-hidden">
+                    <div className="absolute top-0 left-0 h-1 bg-red-500 w-full animate-pulse" />
+                    <p className="text-[10px] text-gray-400 font-mono uppercase">Room Code: X7B9K2</p>
+                    <p className="text-sm font-bold text-indigo-400 mt-1">Python: Two Sum Problem</p>
+                    <div className="flex justify-between text-[10px] mt-2 font-mono text-gray-500">
+                      <span>02:14</span>
+                      <span className="text-emerald-400">Rival Submitting...</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       </section>
@@ -433,6 +473,7 @@ const Landing = () => {
             { icon: Zap, title: 'Skill Gap Diagnostics', desc: 'Compare known skills against real job market requirements to prioritize what to learn next.', color: '#8b5cf6' },
             { icon: GitBranch, title: 'GitHub Intelligence', desc: 'Turn commit streaks, public repos, and star metrics into validated proof of work.', color: '#f59e0b' },
             { icon: FileText, title: 'Resume ATS Engine', desc: 'PDF text extraction and Gemini ATS scoring with actionable bullet-point tips.', color: '#ec4899' },
+            { icon: Swords, title: '1v1 Battle Arena', desc: 'Compete in live, real-time multiplayer coding & quiz matches to earn XP.', color: '#ef4444' },
             { icon: Mic, title: 'Mock Interview AI', desc: 'Interactive mock interview simulator with instant scoring on clarity and technical accuracy.', color: '#f97316' },
             { icon: FolderGit2, title: 'Derived AI Projects', desc: 'Custom project specifications derived from your skill gaps with zero extra API costs.', color: '#10b981' },
             { icon: Map, title: 'Dynamic Roadmap', desc: 'Weekly milestone timeline connecting courses, builds, and proof tasks in one flow.', color: '#3b82f6' },
