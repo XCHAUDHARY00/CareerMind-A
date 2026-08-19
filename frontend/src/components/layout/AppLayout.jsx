@@ -326,11 +326,11 @@ const AppLayout = ({ children, title, subtitle }) => {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <AppHeader title={title} subtitle={subtitle} />
-        <main className="flex-1 overflow-y-auto pb-20 md:pb-6" style={{ background: 'var(--bg-primary)' }}>
+        <main className="flex-1 overflow-y-auto pb-20 md:pb-6" style={{ background: 'transparent' }}>
           {children}
         </main>
       </div>

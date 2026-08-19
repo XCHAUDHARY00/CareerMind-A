@@ -162,50 +162,9 @@ const CodingBattle = () => {
     }
   };
 
-  // LOBBY UI
   if (battleState === 'lobby') {
     return (
-      <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        {/* Animated Moving Orbs Background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div 
-            animate={{ 
-              x: ['-20%', '20%', '-20%'], 
-              y: ['-20%', '20%', '-20%'],
-              rotate: [0, 90, 0]
-            }}
-            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-            className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-fuchsia-600/30 rounded-full blur-[120px]" 
-          />
-          <motion.div 
-            animate={{ 
-              x: ['20%', '-20%', '20%'], 
-              y: ['20%', '-20%', '20%'],
-              rotate: [0, -90, 0]
-            }}
-            transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-            className="absolute top-[40%] right-[10%] w-[35vw] h-[35vw] max-w-[400px] max-h-[400px] bg-indigo-600/30 rounded-full blur-[120px]" 
-          />
-          <motion.div 
-            animate={{ 
-              x: ['0%', '30%', '0%'], 
-              y: ['30%', '0%', '30%'],
-              scale: [1, 1.2, 1]
-            }}
-            transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
-            className="absolute bottom-[-10%] left-[30%] w-[45vw] h-[45vw] max-w-[600px] max-h-[600px] bg-violet-600/20 rounded-full blur-[120px]" 
-          />
-          <motion.div 
-            animate={{ 
-              x: ['-10%', '10%', '-10%'], 
-              y: ['10%', '-10%', '10%'],
-              scale: [1, 1.5, 1]
-            }}
-            transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-            className="absolute top-[20%] right-[40%] w-[25vw] h-[25vw] max-w-[300px] max-h-[300px] bg-rose-600/20 rounded-full blur-[100px]" 
-          />
-        </div>
-        
+      <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative overflow-hidden bg-transparent">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="z-10 max-w-2xl w-full">
           <div className="text-center mb-10">
             <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/20">

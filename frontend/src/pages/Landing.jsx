@@ -70,7 +70,7 @@ const Landing = () => {
   ];
 
   return (
-    <div className="min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div className="min-h-screen transition-colors duration-300" style={{ background: 'transparent', color: 'var(--text-primary)' }}>
 
       {/* Grid background overlay */}
       <div className="fixed inset-0 bg-grid opacity-40 pointer-events-none z-0" />

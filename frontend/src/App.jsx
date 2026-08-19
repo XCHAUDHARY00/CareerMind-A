@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AnimatedBackground from './components/AnimatedBackground';
 
 // Public pages
 import Landing from './pages/Landing';
@@ -47,8 +48,9 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <BrowserRouter>
-          <Routes>
-            {/* Public routes */}
+            <AnimatedBackground />
+            <Routes>
+              {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
