@@ -53,62 +53,79 @@ const CodingBattle = () => {
     color: '#6366f1'
   };
 
-  // Setup WebSocket when entering waiting/playing state
+  // Setup WebSocket when entering a room
   useEffect(() => {
-    if ((battleState === 'waiting' || battleState === 'playing') && roomCode) {
-      ws.current = new WebSocket(`ws://localhost:8000/ws/battle/${roomCode}/`);
-
-      ws.current.onopen = () => {
-        console.log('Connected to Battle Server');
-        // Tell server I joined
-        ws.current.send(JSON.stringify({ type: 'player_join', player: me.name, playerId: playerId }));
-      };
-
-      ws.current.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        console.log('Message from server:', data);
-
-        if (data.action === 'player_join' && data.playerId !== playerId) {
-          // Opponent joined!
-          setOpponent({
-            name: data.player,
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
-            level: 45,
-            xp: 2890,
-            color: '#ef4444'
-          });
-          setBattleState('playing');
-          // Tell the opponent that we are also here and send the game config
-          ws.current.send(JSON.stringify({ type: 'sync_state', player: me.name, playerId: playerId, mode: gameMode, difficulty: difficulty }));
-        } else if (data.action === 'sync_state' && data.playerId !== playerId) {
-          // Received sync from the host/first player
-          setOpponent({
-            name: data.player,
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
-            level: 45,
-            xp: 2890,
-            color: '#ef4444'
-          });
-          setGameMode(data.mode || 'coding');
-          setDifficulty(data.difficulty || 'easy');
-          if (data.mode === 'coding' && data.difficulty) {
-             setCode(QUESTIONS['coding'][data.difficulty]?.defaultCode || '');
-          }
-          setBattleState('playing');
-        } else if (data.action === 'match_finished') {
-          setBattleState('analyzing');
-          setTimeout(() => {
-             setWinner(data.winner);
-             setBattleState('finished');
-          }, 3000);
-        }
-      };
-
-      return () => {
-        if (ws.current) ws.current.close();
-      };
+    // If no room code or back in lobby, ensure socket is closed
+    if (!roomCode || battleState === 'lobby') {
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
+      return;
     }
-  }, [battleState, roomCode]);
+
+    // Prevent multiple connections for the same room
+    if (ws.current) return;
+
+    // Use dynamic host for websocket
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
+    
+    ws.current = new WebSocket(`${protocol}//${wsHost}/ws/battle/${roomCode}/`);
+
+    ws.current.onopen = () => {
+      console.log('Connected to Battle Server');
+      // Tell server I joined
+      ws.current.send(JSON.stringify({ type: 'player_join', player: me.name, playerId: playerId }));
+    };
+
+    ws.current.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      console.log('Message from server:', data);
+
+      if (data.action === 'player_join' && data.playerId !== playerId) {
+        // Opponent joined!
+        setOpponent({
+          name: data.player,
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
+          level: 45,
+          xp: 2890,
+          color: '#ef4444'
+        });
+        setBattleState('playing');
+        // Tell the opponent that we are also here and send the game config
+        ws.current.send(JSON.stringify({ type: 'sync_state', player: me.name, playerId: playerId, mode: gameMode, difficulty: difficulty }));
+      } else if (data.action === 'sync_state' && data.playerId !== playerId) {
+        // Received sync from the host/first player
+        setOpponent({
+          name: data.player,
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
+          level: 45,
+          xp: 2890,
+          color: '#ef4444'
+        });
+        setGameMode(data.mode || 'coding');
+        setDifficulty(data.difficulty || 'easy');
+        if (data.mode === 'coding' && data.difficulty) {
+           setCode(QUESTIONS['coding'][data.difficulty]?.defaultCode || '');
+        }
+        setBattleState('playing');
+      } else if (data.action === 'match_finished') {
+        setBattleState('analyzing');
+        setTimeout(() => {
+           setWinner(data.winner);
+           setBattleState('finished');
+        }, 3000);
+      }
+    };
+
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
+    };
+  }, [roomCode]); // CRITICAL FIX: Only run when roomCode changes, not on every battleState change!
 
   // Timer logic
   useEffect(() => {
@@ -415,8 +432,9 @@ const CodingBattle = () => {
                   )}
                   <button 
                     onClick={() => {
-                      if (ws.current) ws.current.close();
+                      if (ws.current) { ws.current.close(); ws.current = null; }
                       setBattleState('lobby');
+                      setRoomCode('');
                     }}
                     className="bg-white text-black px-8 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
                   >
