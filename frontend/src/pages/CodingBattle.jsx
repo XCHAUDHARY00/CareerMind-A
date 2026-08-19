@@ -63,11 +63,12 @@ const CodingBattle = () => {
       return;
     }
 
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
+    const envUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/';
+    const apiUrl = envUrl.endsWith('/') ? envUrl : envUrl + '/';
     
     const syncRoom = async () => {
       try {
-        const response = await fetch(`${apiUrl}api/battles/sync/${roomCode}/`);
+        const response = await fetch(`${apiUrl}battles/sync/${roomCode}/`);
         if (!response.ok) return;
         const data = await response.json();
         
@@ -133,8 +134,9 @@ const CodingBattle = () => {
 
   const handleTimeUp = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
-      await fetch(`${apiUrl}api/battles/submit/`, {
+      const envUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/';
+      const apiUrl = envUrl.endsWith('/') ? envUrl : envUrl + '/';
+      await fetch(`${apiUrl}battles/submit/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ room_code: roomCode, player: opponent?.name || 'Draw' })
@@ -145,8 +147,9 @@ const CodingBattle = () => {
   const handleSubmit = async () => {
     if (battleState !== 'playing') return;
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
-      await fetch(`${apiUrl}api/battles/submit/`, {
+      const envUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/';
+      const apiUrl = envUrl.endsWith('/') ? envUrl : envUrl + '/';
+      await fetch(`${apiUrl}battles/submit/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ room_code: roomCode, player: me.name })
@@ -167,8 +170,9 @@ const CodingBattle = () => {
     }
     
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
-      const res = await fetch(`${apiUrl}api/battles/create/`, {
+      const envUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/';
+      const apiUrl = envUrl.endsWith('/') ? envUrl : envUrl + '/';
+      const res = await fetch(`${apiUrl}battles/create/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -195,8 +199,9 @@ const CodingBattle = () => {
     if (joinCode.length > 0) {
       const code = joinCode.toUpperCase();
       try {
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
-        const res = await fetch(`${apiUrl}api/battles/join/`, {
+        const envUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/';
+        const apiUrl = envUrl.endsWith('/') ? envUrl : envUrl + '/';
+        const res = await fetch(`${apiUrl}battles/join/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
