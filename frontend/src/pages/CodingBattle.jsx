@@ -42,6 +42,7 @@ const CodingBattle = () => {
   
   // WebSocket Reference
   const ws = useRef(null);
+  const playerId = useRef(Math.random().toString(36).substring(2, 9)).current;
 
   // My Player Data
   const me = {
@@ -60,14 +61,14 @@ const CodingBattle = () => {
       ws.current.onopen = () => {
         console.log('Connected to Battle Server');
         // Tell server I joined
-        ws.current.send(JSON.stringify({ type: 'player_join', player: me.name }));
+        ws.current.send(JSON.stringify({ type: 'player_join', player: me.name, playerId: playerId }));
       };
 
       ws.current.onmessage = (e) => {
         const data = JSON.parse(e.data);
         console.log('Message from server:', data);
 
-        if (data.action === 'player_join' && data.player !== me.name) {
+        if (data.action === 'player_join' && data.playerId !== playerId) {
           // Opponent joined!
           setOpponent({
             name: data.player,
@@ -78,8 +79,8 @@ const CodingBattle = () => {
           });
           setBattleState('playing');
           // Tell the opponent that we are also here and send the game config
-          ws.current.send(JSON.stringify({ type: 'sync_state', player: me.name, mode: gameMode, difficulty: difficulty }));
-        } else if (data.action === 'sync_state' && data.player !== me.name) {
+          ws.current.send(JSON.stringify({ type: 'sync_state', player: me.name, playerId: playerId, mode: gameMode, difficulty: difficulty }));
+        } else if (data.action === 'sync_state' && data.playerId !== playerId) {
           // Received sync from the host/first player
           setOpponent({
             name: data.player,

@@ -38,7 +38,8 @@ class BattleConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'battle_message',
                     'action': 'player_join',
-                    'player': text_data_json.get('player')
+                    'player': text_data_json.get('player'),
+                    'playerId': text_data_json.get('playerId')
                 }
             )
         elif event_type == 'start_match':
@@ -66,6 +67,7 @@ class BattleConsumer(AsyncWebsocketConsumer):
                     'type': 'battle_message',
                     'action': 'sync_state',
                     'player': text_data_json.get('player'),
+                    'playerId': text_data_json.get('playerId'),
                     'mode': text_data_json.get('mode'),
                     'difficulty': text_data_json.get('difficulty')
                 }
