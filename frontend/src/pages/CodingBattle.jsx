@@ -68,10 +68,25 @@ const CodingBattle = () => {
     if (ws.current) return;
 
     // Use dynamic host for websocket
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    let wsUrl = '';
     
-    ws.current = new WebSocket(`${protocol}//${wsHost}/ws/battle/${roomCode}/`);
+    if (isLocal) {
+        wsUrl = `ws://${window.location.hostname}:8000/ws/battle/${roomCode}/`;
+    } else {
+        // In production, use the API base URL to figure out the WS host
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+        const wsHost = apiUrl.replace('http://', '').replace('https://', '').replace(/\/$/, '');
+        const protocol = apiUrl.startsWith('https') ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${wsHost}/ws/battle/${roomCode}/`;
+    }
+    
+    console.log("Connecting to WebSocket:", wsUrl);
+    ws.current = new WebSocket(wsUrl);
+
+    ws.current.onerror = (err) => {
+      console.error('WebSocket Error:', err);
+    };
 
     ws.current.onopen = () => {
       console.log('Connected to Battle Server');
