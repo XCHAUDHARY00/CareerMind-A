@@ -44,6 +44,15 @@ const CodingBattle = () => {
   const pollInterval = useRef(null);
   const playerId = useRef(Math.random().toString(36).substring(2, 9)).current;
 
+  // My Player Data
+  const me = {
+    name: user?.user?.username || user?.username || 'You (Player 1)',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=6366f1',
+    level: 42,
+    xp: user?.career_xp || 2540,
+    color: '#6366f1'
+  };
+
   useEffect(() => {
     // If no room code or back in lobby, ensure polling stops
     if (!roomCode || battleState === 'lobby') {
