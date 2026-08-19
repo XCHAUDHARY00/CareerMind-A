@@ -159,7 +159,7 @@ const CodingBattle = () => {
     
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
-      await fetch(`${apiUrl}api/battles/create/`, {
+      const res = await fetch(`${apiUrl}api/battles/create/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -170,8 +170,14 @@ const CodingBattle = () => {
           difficulty: difficulty
         })
       });
+      if (!res.ok) {
+         const errText = await res.text();
+         alert("Backend error (Check migrations!): " + res.status + " " + errText.substring(0, 50));
+         return;
+      }
       setBattleState('waiting');
     } catch (error) {
+      alert("Network Error: " + error.message);
       console.error('Error creating room', error);
     }
   };
