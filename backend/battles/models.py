@@ -25,6 +25,14 @@ class BattleRoom(models.Model):
     
     quiz_data = models.JSONField(null=True, blank=True)
     
+    host_score = models.IntegerField(default=0)
+    host_time = models.IntegerField(default=0)
+    host_submitted = models.BooleanField(default=False)
+    
+    join_score = models.IntegerField(default=0)
+    join_time = models.IntegerField(default=0)
+    join_submitted = models.BooleanField(default=False)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

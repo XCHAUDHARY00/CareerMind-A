@@ -69,6 +69,9 @@ const CodingBattle = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [aiQuestions, setAiQuestions] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
+  const [isWaitingForOpponent, setIsWaitingForOpponent] = useState(false);
+  const [matchStats, setMatchStats] = useState(null);
   
   // Play States
   const [code, setCode] = useState('');
@@ -125,6 +128,8 @@ const CodingBattle = () => {
           } else if (data.game_mode === 'quiz') {
              setCurrentQuestionIndex(0);
              setSelectedOption(null);
+             setCorrectAnswersCount(0);
+             setIsWaitingForOpponent(false);
              if (data.quiz_data && Array.isArray(data.quiz_data) && data.quiz_data.length === 10) {
                  setAiQuestions(data.quiz_data);
              } else {
@@ -134,6 +139,12 @@ const CodingBattle = () => {
           setBattleState('playing');
         } else if (data.status === 'finished' && battleState === 'playing') {
           setBattleState('analyzing');
+          setMatchStats({
+             host_player: data.host_player,
+             join_player: data.join_player,
+             host_score: data.host_score, host_time: data.host_time, 
+             join_score: data.join_score, join_time: data.join_time
+          });
           setTimeout(() => {
              setWinner(data.winner);
              setBattleState('finished');
@@ -183,37 +194,55 @@ const CodingBattle = () => {
       await fetch(`${apiUrl}battles/submit/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room_code: roomCode, player: opponent?.name || 'Draw' })
+        body: JSON.stringify({ 
+          room_code: roomCode, 
+          player: me.name,
+          score: correctAnswersCount,
+          time_taken: 300
+        })
       });
+      if (gameMode === 'quiz') {
+         setIsWaitingForOpponent(true);
+      }
     } catch (e) {}
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (finalScore = 0) => {
     if (battleState !== 'playing') return;
     try {
       const envUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/';
       const apiUrl = envUrl.endsWith('/') ? envUrl : envUrl + '/';
+      const timeTaken = 300 - timeLeft;
       await fetch(`${apiUrl}battles/submit/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room_code: roomCode, player: me.name })
+        body: JSON.stringify({ 
+          room_code: roomCode, 
+          player: me.name,
+          score: gameMode === 'quiz' ? finalScore : 0,
+          time_taken: timeTaken
+        })
       });
+      if (gameMode === 'quiz') {
+         setIsWaitingForOpponent(true);
+      }
     } catch (e) {}
   };
 
   const handleQuizSubmit = () => {
     const questionsList = aiQuestions || QUESTIONS.quiz[difficulty];
     const currentQ = questionsList[currentQuestionIndex];
-    if (selectedOption !== currentQ.ans) {
-      alert("Wrong Answer! Try again.");
-      return;
+    let newScore = correctAnswersCount;
+    if (selectedOption === currentQ.ans) {
+      newScore += 1;
+      setCorrectAnswersCount(newScore);
     }
     
     if (currentQuestionIndex < 9) {
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedOption(null);
     } else {
-      handleSubmit(); // Finished all 10 questions!
+      handleSubmit(newScore); // Finished all 10 questions!
     }
   };
 
@@ -230,6 +259,8 @@ const CodingBattle = () => {
     } else if (mode === 'quiz') {
        setCurrentQuestionIndex(0);
        setSelectedOption(null);
+       setCorrectAnswersCount(0);
+       setIsWaitingForOpponent(false);
        setAiQuestions(null);
     }
     
@@ -294,6 +325,8 @@ const CodingBattle = () => {
            } else if (data.mode === 'quiz') {
               setCurrentQuestionIndex(0);
               setSelectedOption(null);
+              setCorrectAnswersCount(0);
+              setIsWaitingForOpponent(false);
               if (data.quiz_data && Array.isArray(data.quiz_data) && data.quiz_data.length === 10) {
                  setAiQuestions(data.quiz_data);
               } else {
@@ -432,6 +465,9 @@ const CodingBattle = () => {
     </motion.div>
   );
 
+  const isWinner = winner === me.name;
+  const isDraw = winner === 'Draw';
+
   return (
     <div className="min-h-screen bg-[#09090b] text-white flex flex-col font-sans overflow-hidden">
       
@@ -540,15 +576,26 @@ const CodingBattle = () => {
                   <Trophy size={64} className={winner === me.name ? 'text-indigo-400' : 'text-red-400'} />
                 </motion.div>
                 
-                <h1 className="text-5xl font-extrabold mb-4 uppercase tracking-wider">
-                  {winner === me.name ? 'VICTORY' : 'DEFEAT'}
-                </h1>
-                
-                <p className="text-xl text-gray-300 mb-6">
-                  {winner === me.name ? 'You crushed your opponent!' : `${winner} won the battle.`}
+                <h2 className="text-4xl font-black mb-2 tracking-tight">
+                  {isWinner ? 'VICTORY!' : isDraw ? 'DRAW!' : 'DEFEAT'}
+                </h2>
+                <p className="text-gray-400 text-lg">
+                  {isWinner ? 'You dominated the arena.' : isDraw ? 'A fierce battle, perfectly matched.' : 'Your opponent proved superior... this time.'}
                 </p>
-
-                {/* AI Analysis Feedback */}
+                
+                {gameMode === 'quiz' && matchStats && (
+                  <div className="mt-6 flex gap-4 justify-center">
+                     <div className="bg-black/30 p-4 rounded-xl border border-white/10">
+                        <p className="text-sm text-gray-400 uppercase font-bold tracking-wider mb-1">Your Score</p>
+                        <p className="text-3xl font-black text-emerald-400">{me.name === matchStats.host_player ? matchStats.host_score : matchStats.join_score}/10</p>
+                     </div>
+                     <div className="bg-black/30 p-4 rounded-xl border border-white/10">
+                        <p className="text-sm text-gray-400 uppercase font-bold tracking-wider mb-1">Opponent</p>
+                        <p className="text-3xl font-black text-rose-400">{me.name === matchStats.host_player ? matchStats.join_score : matchStats.host_score}/10</p>
+                     </div>
+                  </div>
+                )}
+              </div>
                 <div className="bg-[#15151e] border border-indigo-500/30 rounded-xl p-4 mb-8 text-left max-w-md mx-auto relative overflow-hidden">
                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-purple-500" />
                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-2">
@@ -633,9 +680,16 @@ const CodingBattle = () => {
           ) : (
             // Quiz Mode UI
             <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0d0d12]">
-              <div className="w-full max-w-3xl">
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-8 mb-6 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+              {isWaitingForOpponent ? (
+                 <div className="w-full max-w-3xl text-center bg-white/5 border border-white/10 rounded-2xl p-12">
+                   <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+                   <h2 className="text-3xl font-bold mb-2">Waiting for Opponent...</h2>
+                   <p className="text-gray-400">You scored {correctAnswersCount}/10! Let's see how {opponent?.name || 'Opponent'} does.</p>
+                 </div>
+              ) : (
+                <div className="w-full max-w-3xl">
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-8 mb-6 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2 block">Question {currentQuestionIndex + 1} of 10</span>
                   <h2 className="text-2xl font-bold mb-6 leading-relaxed">
                     {(aiQuestions || QUESTIONS.quiz[difficulty])[currentQuestionIndex].q}
@@ -670,7 +724,7 @@ const CodingBattle = () => {
                     {currentQuestionIndex < 9 ? 'Next Question \u2192' : 'Submit Battle \u2192'}
                   </button>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
