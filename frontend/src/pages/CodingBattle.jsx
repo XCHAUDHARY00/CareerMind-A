@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import { 
   Terminal, Play, Clock, 
-  Trophy, Zap, Swords,
+  Trophy, Zap, Swords, Copy,
   AlertCircle, X, TrendingUp, HelpCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -61,7 +61,18 @@ const CodingBattle = () => {
             xp: 2890,
             color: '#ef4444'
           });
-          // Start match
+          setBattleState('playing');
+          // Tell the opponent that we are also here
+          ws.current.send(JSON.stringify({ type: 'sync_state', player: me.name }));
+        } else if (data.action === 'sync_state' && data.player !== me.name) {
+          // Received sync from the host/first player
+          setOpponent({
+            name: data.player,
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
+            level: 45,
+            xp: 2890,
+            color: '#ef4444'
+          });
           setBattleState('playing');
         } else if (data.action === 'match_finished') {
           setBattleState('finished');
@@ -169,7 +180,7 @@ const CodingBattle = () => {
               placeholder="Enter Room Code (e.g. X7B9K2)" 
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)}
-              className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 uppercase font-mono"
+              className="flex-1 bg-[#1a1a25] border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 uppercase font-mono"
             />
             <button 
               onClick={handleJoinRoom}
@@ -281,8 +292,17 @@ const CodingBattle = () => {
                 <div className="w-20 h-20 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-6" />
                 <h2 className="text-3xl font-bold mb-2">Waiting for Opponent...</h2>
                 <div className="bg-white/10 px-6 py-3 rounded-xl border border-white/20 flex flex-col items-center mt-4">
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Share this code with your friend</p>
-                  <p className="text-3xl font-mono font-bold text-indigo-400">{roomCode}</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Share this code with your friend</p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-3xl font-mono font-bold text-indigo-400">{roomCode}</p>
+                    <button 
+                      onClick={() => navigator.clipboard.writeText(roomCode)}
+                      className="p-2 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-lg transition-colors group relative"
+                      title="Copy Code"
+                    >
+                      <Copy size={20} className="text-indigo-400" />
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}

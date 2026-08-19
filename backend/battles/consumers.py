@@ -59,6 +59,15 @@ class BattleConsumer(AsyncWebsocketConsumer):
                     'winner': text_data_json.get('player')
                 }
             )
+        elif event_type == 'sync_state':
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'battle_message',
+                    'action': 'sync_state',
+                    'player': text_data_json.get('player')
+                }
+            )
 
     # Receive message from room group
     async def battle_message(self, event):
