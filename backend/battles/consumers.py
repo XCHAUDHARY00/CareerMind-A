@@ -65,7 +65,9 @@ class BattleConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'battle_message',
                     'action': 'sync_state',
-                    'player': text_data_json.get('player')
+                    'player': text_data_json.get('player'),
+                    'mode': text_data_json.get('mode'),
+                    'difficulty': text_data_json.get('difficulty')
                 }
             )
 

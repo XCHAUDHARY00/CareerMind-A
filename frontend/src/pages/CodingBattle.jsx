@@ -9,6 +9,19 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+const QUESTIONS = {
+  coding: {
+    easy: { title: 'Two Sum Problem', desc: 'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.', defaultCode: 'def twoSum(nums, target):\n    # Write your highly optimized code here\n    pass' },
+    medium: { title: 'Merge Intervals', desc: 'Given an array of intervals where intervals[i] = [starti, endi], merge all overlapping intervals.', defaultCode: 'def merge(intervals):\n    # Write your code here\n    pass' },
+    hard: { title: 'N-Queens', desc: 'The n-queens puzzle is the problem of placing n queens on an n x n chessboard such that no two queens attack each other.', defaultCode: 'def solveNQueens(n):\n    # Write your code here\n    pass' }
+  },
+  quiz: {
+    easy: { q: 'Which data structure uses LIFO (Last In First Out) principle?', opts: ['Queue', 'Stack', 'Linked List', 'Array'] },
+    medium: { q: 'What is the time complexity of quicksort in the worst case?', opts: ['O(n)', 'O(n log n)', 'O(n^2)', 'O(log n)'] },
+    hard: { q: 'Which consistency model guarantees that all readers see the most recent write?', opts: ['Eventual', 'Causal', 'Strong', 'Monotonic'] }
+  }
+};
+
 const CodingBattle = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -16,11 +29,12 @@ const CodingBattle = () => {
   // Game States
   const [battleState, setBattleState] = useState('lobby'); // lobby, waiting, playing, finished
   const [gameMode, setGameMode] = useState('coding'); // coding, quiz
+  const [difficulty, setDifficulty] = useState('easy'); // easy, medium, hard
   const [roomCode, setRoomCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
   
   // Play States
-  const [code, setCode] = useState('def twoSum(nums, target):\n    # Write your highly optimized code here\n    pass');
+  const [code, setCode] = useState('');
   const [timeLeft, setTimeLeft] = useState(300); // 5 mins
   const [winner, setWinner] = useState(null);
   const [opponent, setOpponent] = useState(null);
@@ -62,8 +76,8 @@ const CodingBattle = () => {
             color: '#ef4444'
           });
           setBattleState('playing');
-          // Tell the opponent that we are also here
-          ws.current.send(JSON.stringify({ type: 'sync_state', player: me.name }));
+          // Tell the opponent that we are also here and send the game config
+          ws.current.send(JSON.stringify({ type: 'sync_state', player: me.name, mode: gameMode, difficulty: difficulty }));
         } else if (data.action === 'sync_state' && data.player !== me.name) {
           // Received sync from the host/first player
           setOpponent({
@@ -73,6 +87,11 @@ const CodingBattle = () => {
             xp: 2890,
             color: '#ef4444'
           });
+          setGameMode(data.mode || 'coding');
+          setDifficulty(data.difficulty || 'easy');
+          if (data.mode === 'coding' && data.difficulty) {
+             setCode(QUESTIONS['coding'][data.difficulty]?.defaultCode || '');
+          }
           setBattleState('playing');
         } else if (data.action === 'match_finished') {
           setBattleState('finished');
@@ -125,6 +144,9 @@ const CodingBattle = () => {
   const handleCreateRoom = (mode) => {
     setGameMode(mode);
     setRoomCode(generateRoomCode());
+    if (mode === 'coding') {
+       setCode(QUESTIONS['coding'][difficulty].defaultCode);
+    }
     setBattleState('waiting');
   };
 
@@ -147,7 +169,24 @@ const CodingBattle = () => {
               <Swords size={40} className="text-white" />
             </div>
             <h1 className="text-4xl font-bold font-sans tracking-tight mb-3">Multiplayer Arena</h1>
-            <p className="text-gray-400">Challenge friends or random opponents to test your skills.</p>
+            <p className="text-gray-400 mb-6">Challenge friends or random opponents to test your skills.</p>
+            
+            {/* Difficulty Selector */}
+            <div className="flex justify-center gap-3">
+               {['easy', 'medium', 'hard'].map(d => (
+                 <button
+                   key={d}
+                   onClick={() => setDifficulty(d)}
+                   className={`px-6 py-2 rounded-full font-bold uppercase tracking-wider text-xs transition-all ${
+                     difficulty === d 
+                       ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' 
+                       : 'bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/30'
+                   }`}
+                 >
+                   {d}
+                 </button>
+               ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -248,7 +287,10 @@ const CodingBattle = () => {
           </div>
           <div>
             <h1 className="font-bold text-md tracking-wide uppercase">1v1 {gameMode} BATTLE</h1>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider font-mono">Room ID: #{roomCode}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-mono">Room ID: #{roomCode}</p>
+              <span className="text-[10px] bg-white/10 px-2 rounded uppercase text-white font-bold">{difficulty}</span>
+            </div>
           </div>
         </div>
 
@@ -357,10 +399,10 @@ const CodingBattle = () => {
               {/* Problem Description Bar */}
               <div className="bg-[#15151e] border-b border-white/10 p-4">
                 <h2 className="text-lg font-bold text-indigo-400 flex items-center gap-2">
-                  <Terminal size={18} /> Two Sum Problem
+                  <Terminal size={18} /> {QUESTIONS.coding[difficulty].title}
                 </h2>
                 <p className="text-sm text-gray-400 mt-1 line-clamp-1">
-                  Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
+                  {QUESTIONS.coding[difficulty].desc}
                 </p>
               </div>
 
@@ -408,10 +450,10 @@ const CodingBattle = () => {
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2 block">Question 1 of 5</span>
                   <h2 className="text-2xl font-bold mb-6 leading-relaxed">
-                    Which data structure uses LIFO (Last In First Out) principle?
+                    {QUESTIONS.quiz[difficulty].q}
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {['Queue', 'Stack', 'Linked List', 'Array'].map((opt, i) => (
+                    {QUESTIONS.quiz[difficulty].opts.map((opt, i) => (
                       <button key={i} className="bg-black/50 hover:bg-white/10 border border-white/10 hover:border-emerald-500/50 p-4 rounded-xl text-left font-medium transition-all group flex items-center justify-between">
                         {opt}
                         <div className="w-5 h-5 rounded-full border-2 border-white/20 group-hover:border-emerald-500" />
