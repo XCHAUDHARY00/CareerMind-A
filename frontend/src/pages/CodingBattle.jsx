@@ -32,6 +32,7 @@ const CodingBattle = () => {
   const [difficulty, setDifficulty] = useState('easy'); // easy, medium, hard
   const [roomCode, setRoomCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
+  const [selectedOption, setSelectedOption] = useState(null);
   
   // Play States
   const [code, setCode] = useState('');
@@ -94,8 +95,11 @@ const CodingBattle = () => {
           }
           setBattleState('playing');
         } else if (data.action === 'match_finished') {
-          setBattleState('finished');
-          setWinner(data.winner);
+          setBattleState('analyzing');
+          setTimeout(() => {
+             setWinner(data.winner);
+             setBattleState('finished');
+          }, 3000);
         }
       };
 
@@ -219,7 +223,7 @@ const CodingBattle = () => {
               placeholder="Enter Room Code (e.g. X7B9K2)" 
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)}
-              className="flex-1 bg-[#1a1a25] border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 uppercase font-mono"
+              className="flex-1 bg-[#1a1a25] border border-white/20 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-indigo-500 uppercase font-mono"
             />
             <button 
               onClick={handleJoinRoom}
@@ -350,6 +354,24 @@ const CodingBattle = () => {
             )}
           </AnimatePresence>
 
+          {/* Analyzing Overlay */}
+          <AnimatePresence>
+            {battleState === 'analyzing' && (
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 z-30 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center"
+              >
+                <div className="w-24 h-24 relative mb-6">
+                  <div className="absolute inset-0 border-4 border-indigo-500/30 rounded-full" />
+                  <div className="absolute inset-0 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  <Zap size={32} className="text-indigo-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-2">AI Analyzing Submissions...</h2>
+                <p className="text-gray-400">Evaluating time complexity, logic, and speed.</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Finished Overlay */}
           <AnimatePresence>
             {battleState === 'finished' && (
@@ -370,9 +392,22 @@ const CodingBattle = () => {
                   {winner === me.name ? 'VICTORY' : 'DEFEAT'}
                 </h1>
                 
-                <p className="text-xl text-gray-300 mb-8">
+                <p className="text-xl text-gray-300 mb-6">
                   {winner === me.name ? 'You crushed your opponent!' : `${winner} won the battle.`}
                 </p>
+
+                {/* AI Analysis Feedback */}
+                <div className="bg-[#15151e] border border-indigo-500/30 rounded-xl p-4 mb-8 text-left max-w-md mx-auto relative overflow-hidden">
+                   <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-purple-500" />
+                   <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                     <Zap size={14} /> AI Analysis
+                   </p>
+                   <p className="text-sm text-gray-300">
+                     {winner === me.name 
+                       ? "Your approach was highly optimized! The execution time and logic were superior. Great job maintaining clean code."
+                       : "Your opponent's submission was evaluated as slightly more optimal or submitted faster. Review their solution to learn!"}
+                   </p>
+                </div>
                 
                 <div className="flex gap-4">
                   {winner === me.name && (
@@ -454,9 +489,21 @@ const CodingBattle = () => {
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {QUESTIONS.quiz[difficulty].opts.map((opt, i) => (
-                      <button key={i} className="bg-black/50 hover:bg-white/10 border border-white/10 hover:border-emerald-500/50 p-4 rounded-xl text-left font-medium transition-all group flex items-center justify-between">
+                      <button 
+                        key={i} 
+                        onClick={() => setSelectedOption(i)}
+                        className={`p-4 rounded-xl text-left font-medium transition-all group flex items-center justify-between border ${
+                          selectedOption === i 
+                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-500/20' 
+                            : 'bg-black/50 hover:bg-white/10 border-white/10 hover:border-emerald-500/50'
+                        }`}
+                      >
                         {opt}
-                        <div className="w-5 h-5 rounded-full border-2 border-white/20 group-hover:border-emerald-500" />
+                        <div className={`w-5 h-5 rounded-full border-2 transition-colors ${
+                          selectedOption === i 
+                            ? 'border-emerald-500 bg-emerald-500' 
+                            : 'border-white/20 group-hover:border-emerald-500'
+                        }`} />
                       </button>
                     ))}
                   </div>
@@ -464,8 +511,8 @@ const CodingBattle = () => {
                 <div className="flex justify-end">
                    <button
                     onClick={handleSubmit}
-                    disabled={battleState !== 'playing'}
-                    className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/30 hover:-translate-y-0.5`}
+                    disabled={battleState !== 'playing' || selectedOption === null}
+                    className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/30 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0`}
                   >
                     Submit Answer &rarr;
                   </button>
