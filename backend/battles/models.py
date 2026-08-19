@@ -23,6 +23,8 @@ class BattleRoom(models.Model):
     winner = models.CharField(max_length=100, null=True, blank=True)
     winner_id = models.CharField(max_length=50, null=True, blank=True)
     
+    quiz_data = models.JSONField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

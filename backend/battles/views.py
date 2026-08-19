@@ -19,13 +19,35 @@ def create_room(request):
     # Delete existing room with same code if any (for cleanup, though unique is enforced)
     BattleRoom.objects.filter(room_code=room_code).delete()
 
+    quiz_data = None
+    if game_mode == 'quiz':
+        try:
+            from users.interview_service import get_gemini_model, clean_json_response
+            model = get_gemini_model()
+            prompt = f"""
+            Generate exactly 10 multiple choice questions about computer science and programming for difficulty '{difficulty}'.
+            Provide output ONLY in JSON format as a list of objects.
+            Each object must have exactly these keys:
+            - "q": The question string
+            - "opts": A list of 4 string options
+            - "ans": An integer index (0-3) of the correct option.
+            Do not include any other text, just the JSON array.
+            """
+            response = model.generate_content(prompt)
+            clean_text = clean_json_response(response.text)
+            quiz_data = json.loads(clean_text)
+        except Exception as e:
+            print(f"Error generating AI quiz questions: {e}")
+            quiz_data = None
+
     room = BattleRoom.objects.create(
         room_code=room_code,
         host_player=host_player,
         host_player_id=host_player_id,
         game_mode=game_mode,
         difficulty=difficulty,
-        status='waiting'
+        status='waiting',
+        quiz_data=quiz_data
     )
     
     return Response({"success": True, "room_code": room.room_code})
@@ -60,7 +82,8 @@ def join_room(request):
         "success": True, 
         "mode": room.game_mode, 
         "difficulty": room.difficulty,
-        "opponent": room.host_player
+        "opponent": room.host_player,
+        "quiz_data": room.quiz_data
     })
 
 @api_view(['GET'])
@@ -79,7 +102,8 @@ def sync_room(request, room_code):
         "join_player_id": room.join_player_id,
         "game_mode": room.game_mode,
         "difficulty": room.difficulty,
-        "winner": room.winner
+        "winner": room.winner,
+        "quiz_data": room.quiz_data
     })
 
 @api_view(['POST'])

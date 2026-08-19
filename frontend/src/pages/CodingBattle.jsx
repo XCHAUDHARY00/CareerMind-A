@@ -16,9 +16,42 @@ const QUESTIONS = {
     hard: { title: 'N-Queens', desc: 'The n-queens puzzle is the problem of placing n queens on an n x n chessboard such that no two queens attack each other.', defaultCode: 'def solveNQueens(n):\n    # Write your code here\n    pass' }
   },
   quiz: {
-    easy: { q: 'Which data structure uses LIFO (Last In First Out) principle?', opts: ['Queue', 'Stack', 'Linked List', 'Array'] },
-    medium: { q: 'What is the time complexity of quicksort in the worst case?', opts: ['O(n)', 'O(n log n)', 'O(n^2)', 'O(log n)'] },
-    hard: { q: 'Which consistency model guarantees that all readers see the most recent write?', opts: ['Eventual', 'Causal', 'Strong', 'Monotonic'] }
+    easy: [
+      { q: 'Which data structure uses LIFO (Last In First Out) principle?', opts: ['Queue', 'Stack', 'Linked List', 'Array'], ans: 1 },
+      { q: 'What does HTML stand for?', opts: ['Hyper Text Markup Language', 'High Text Machine Language', 'Hyper Loop Machine Language', 'None'], ans: 0 },
+      { q: 'Which of the following is a Javascript framework?', opts: ['Django', 'React', 'Flask', 'Laravel'], ans: 1 },
+      { q: 'Which symbol is used for single line comments in Javascript?', opts: ['//', '/*', '#', '<!--'], ans: 0 },
+      { q: 'What is the time complexity of binary search?', opts: ['O(n)', 'O(n^2)', 'O(log n)', 'O(1)'], ans: 2 },
+      { q: 'Which HTTP method is used to create a new resource?', opts: ['GET', 'POST', 'PUT', 'DELETE'], ans: 1 },
+      { q: 'What is the output of 2 + "2" in JS?', opts: ['4', '22', 'NaN', 'Error'], ans: 1 },
+      { q: 'Which keyword is used to declare a constant in JS?', opts: ['var', 'let', 'const', 'def'], ans: 2 },
+      { q: 'What does CSS stand for?', opts: ['Computer Style Sheets', 'Creative Style Sheets', 'Cascading Style Sheets', 'Colorful Style Sheets'], ans: 2 },
+      { q: 'Which hook is used to manage state in React?', opts: ['useEffect', 'useState', 'useContext', 'useReducer'], ans: 1 }
+    ],
+    medium: [
+      { q: 'What is the time complexity of quicksort in the worst case?', opts: ['O(n)', 'O(n log n)', 'O(n^2)', 'O(log n)'], ans: 2 },
+      { q: 'Which design pattern restricts object creation to a single instance?', opts: ['Factory', 'Singleton', 'Observer', 'Builder'], ans: 1 },
+      { q: 'What is a closure in JavaScript?', opts: ['A function bundled with its lexical environment', 'A loop that never ends', 'A block of code', 'An error type'], ans: 0 },
+      { q: 'Which method adds an element to the end of an array?', opts: ['push()', 'pop()', 'shift()', 'unshift()'], ans: 0 },
+      { q: 'What does ACID stand for in databases?', opts: ['Atomicity, Consistency, Isolation, Durability', 'Array, Code, Int, Double', 'Asynchronous, Causal, Isolated, Distributed', 'None'], ans: 0 },
+      { q: 'What is the default port for HTTP?', opts: ['443', '80', '8080', '22'], ans: 1 },
+      { q: 'Which algorithm is used to find the shortest path in a graph?', opts: ['DFS', 'Dijkstra', 'Binary Search', 'Merge Sort'], ans: 1 },
+      { q: 'What is a Promise in JS?', opts: ['An object representing eventual completion of an async operation', 'A guarantee of execution', 'A synchronous function', 'A new data type'], ans: 0 },
+      { q: 'Which command is used to create a new branch in Git?', opts: ['git branch', 'git checkout -b', 'Both A and B', 'git merge'], ans: 2 },
+      { q: 'What is Virtual DOM in React?', opts: ['A direct copy of the real DOM', 'A lightweight JavaScript representation of the DOM', 'A browser feature', 'A CSS engine'], ans: 1 }
+    ],
+    hard: [
+      { q: 'Which consistency model guarantees that all readers see the most recent write?', opts: ['Eventual', 'Causal', 'Strong', 'Monotonic'], ans: 2 },
+      { q: 'What is the CAP theorem?', opts: ['Consistency, Availability, Partition tolerance', 'Concurrency, Asynchrony, Parallelism', 'Code, API, Process', 'None'], ans: 0 },
+      { q: 'Which sorting algorithm is most efficient for nearly sorted data?', opts: ['Quick Sort', 'Merge Sort', 'Insertion Sort', 'Heap Sort'], ans: 2 },
+      { q: 'What is a B-Tree primarily used for?', opts: ['In-memory searching', 'Database indexing', 'Cryptographic hashing', 'Graph traversal'], ans: 1 },
+      { q: 'What is the primary difference between a process and a thread?', opts: ['Threads share memory, processes do not', 'Processes are faster', 'Threads cannot be preempted', 'No difference'], ans: 0 },
+      { q: 'In OSI model, which layer is responsible for routing?', opts: ['Data Link', 'Transport', 'Network', 'Application'], ans: 2 },
+      { q: 'What does CORS stand for?', opts: ['Cross-Origin Resource Sharing', 'Central Object Routing System', 'Computer Online Rest Service', 'None'], ans: 0 },
+      { q: 'Which garbage collection algorithm does V8 (JavaScript) primarily use?', opts: ['Reference Counting', 'Mark-and-Sweep', 'Manual Memory Management', 'Stop-and-copy'], ans: 1 },
+      { q: 'What is event delegation in JavaScript?', opts: ['Attaching a single listener to a parent element', 'Creating multiple events', 'Stopping event propagation', 'None'], ans: 0 },
+      { q: 'What is a Bloom Filter?', opts: ['A probabilistic data structure used to test set membership', 'An image processing algorithm', 'A sorting method', 'A type of binary tree'], ans: 0 }
+    ]
   }
 };
 
@@ -33,6 +66,9 @@ const CodingBattle = () => {
   const [roomCode, setRoomCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [aiQuestions, setAiQuestions] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // Play States
   const [code, setCode] = useState('');
@@ -86,6 +122,14 @@ const CodingBattle = () => {
           setDifficulty(data.difficulty || 'easy');
           if (data.game_mode === 'coding' && data.difficulty) {
              setCode(QUESTIONS['coding'][data.difficulty]?.defaultCode || '');
+          } else if (data.game_mode === 'quiz') {
+             setCurrentQuestionIndex(0);
+             setSelectedOption(null);
+             if (data.quiz_data && Array.isArray(data.quiz_data) && data.quiz_data.length === 10) {
+                 setAiQuestions(data.quiz_data);
+             } else {
+                 setAiQuestions(null);
+             }
           }
           setBattleState('playing');
         } else if (data.status === 'finished' && battleState === 'playing') {
@@ -157,6 +201,22 @@ const CodingBattle = () => {
     } catch (e) {}
   };
 
+  const handleQuizSubmit = () => {
+    const questionsList = aiQuestions || QUESTIONS.quiz[difficulty];
+    const currentQ = questionsList[currentQuestionIndex];
+    if (selectedOption !== currentQ.ans) {
+      alert("Wrong Answer! Try again.");
+      return;
+    }
+    
+    if (currentQuestionIndex < 9) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedOption(null);
+    } else {
+      handleSubmit(); // Finished all 10 questions!
+    }
+  };
+
   const generateRoomCode = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
@@ -167,8 +227,13 @@ const CodingBattle = () => {
     setRoomCode(newRoomCode);
     if (mode === 'coding') {
        setCode(QUESTIONS['coding'][difficulty].defaultCode);
+    } else if (mode === 'quiz') {
+       setCurrentQuestionIndex(0);
+       setSelectedOption(null);
+       setAiQuestions(null);
     }
     
+    setIsGenerating(true);
     try {
       const envUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/';
       const apiUrl = envUrl.endsWith('/') ? envUrl : envUrl + '/';
@@ -183,6 +248,7 @@ const CodingBattle = () => {
           difficulty: difficulty
         })
       });
+      setIsGenerating(false);
       if (!res.ok) {
          const errText = await res.text();
          alert("Backend error (Check migrations!): " + res.status + " " + errText.substring(0, 50));
@@ -190,6 +256,7 @@ const CodingBattle = () => {
       }
       setBattleState('waiting');
     } catch (error) {
+      setIsGenerating(false);
       alert("Network Error: " + error.message);
       console.error('Error creating room', error);
     }
@@ -224,6 +291,14 @@ const CodingBattle = () => {
            setDifficulty(data.difficulty || 'easy');
            if (data.mode === 'coding' && data.difficulty) {
               setCode(QUESTIONS['coding'][data.difficulty]?.defaultCode || '');
+           } else if (data.mode === 'quiz') {
+              setCurrentQuestionIndex(0);
+              setSelectedOption(null);
+              if (data.quiz_data && Array.isArray(data.quiz_data) && data.quiz_data.length === 10) {
+                 setAiQuestions(data.quiz_data);
+              } else {
+                 setAiQuestions(null);
+              }
            }
            setBattleState('playing');
         } else {
@@ -238,6 +313,12 @@ const CodingBattle = () => {
   if (battleState === 'lobby') {
     return (
       <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative overflow-hidden bg-transparent">
+        {isGenerating && (
+           <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center">
+              <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <h2 className="text-2xl font-bold">Generating AI Quiz...</h2>
+           </div>
+        )}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="z-10 max-w-2xl w-full">
           <div className="text-center mb-10">
             <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/20">
@@ -555,12 +636,12 @@ const CodingBattle = () => {
               <div className="w-full max-w-3xl">
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-8 mb-6 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2 block">Question 1 of 5</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2 block">Question {currentQuestionIndex + 1} of 10</span>
                   <h2 className="text-2xl font-bold mb-6 leading-relaxed">
-                    {QUESTIONS.quiz[difficulty].q}
+                    {(aiQuestions || QUESTIONS.quiz[difficulty])[currentQuestionIndex].q}
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {QUESTIONS.quiz[difficulty].opts.map((opt, i) => (
+                    {(aiQuestions || QUESTIONS.quiz[difficulty])[currentQuestionIndex].opts.map((opt, i) => (
                       <button 
                         key={i} 
                         onClick={() => setSelectedOption(i)}
@@ -582,11 +663,11 @@ const CodingBattle = () => {
                 </div>
                 <div className="flex justify-end">
                    <button
-                    onClick={handleSubmit}
+                    onClick={handleQuizSubmit}
                     disabled={battleState !== 'playing' || selectedOption === null}
                     className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/30 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0`}
                   >
-                    Submit Answer &rarr;
+                    {currentQuestionIndex < 9 ? 'Next Question \u2192' : 'Submit Battle \u2192'}
                   </button>
                 </div>
               </div>
