@@ -40,107 +40,68 @@ const CodingBattle = () => {
   const [winner, setWinner] = useState(null);
   const [opponent, setOpponent] = useState(null);
   
-  // WebSocket Reference
-  const ws = useRef(null);
+  // Polling mechanism
+  const pollInterval = useRef(null);
   const playerId = useRef(Math.random().toString(36).substring(2, 9)).current;
 
-  // My Player Data
-  const me = {
-    name: user?.user?.username || user?.username || 'You (Player 1)',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=6366f1',
-    level: 42,
-    xp: user?.career_xp || 2540,
-    color: '#6366f1'
-  };
-
-  // Setup WebSocket when entering a room
   useEffect(() => {
-    // If no room code or back in lobby, ensure socket is closed
+    // If no room code or back in lobby, ensure polling stops
     if (!roomCode || battleState === 'lobby') {
-      if (ws.current) {
-        ws.current.close();
-        ws.current = null;
+      if (pollInterval.current) {
+        clearInterval(pollInterval.current);
+        pollInterval.current = null;
       }
       return;
     }
 
-    // Prevent multiple connections for the same room
-    if (ws.current) return;
-
-    // Use dynamic host for websocket
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    let wsUrl = '';
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
     
-    if (isLocal) {
-        wsUrl = `ws://${window.location.hostname}:8000/ws/battle/${roomCode}/`;
-    } else {
-        // In production, use the API base URL to figure out the WS host
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
-        const wsHost = apiUrl.replace('http://', '').replace('https://', '').replace(/\/$/, '');
-        const protocol = apiUrl.startsWith('https') ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${wsHost}/ws/battle/${roomCode}/`;
-    }
-    
-    console.log("Connecting to WebSocket:", wsUrl);
-    ws.current = new WebSocket(wsUrl);
-
-    ws.current.onerror = (err) => {
-      console.error('WebSocket Error:', err);
-    };
-
-    ws.current.onopen = () => {
-      console.log('Connected to Battle Server');
-      // Tell server I joined
-      ws.current.send(JSON.stringify({ type: 'player_join', player: me.name, playerId: playerId }));
-    };
-
-    ws.current.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      console.log('Message from server:', data);
-
-      if (data.action === 'player_join' && data.playerId !== playerId) {
-        // Opponent joined!
-        setOpponent({
-          name: data.player,
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
-          level: 45,
-          xp: 2890,
-          color: '#ef4444'
-        });
-        setBattleState('playing');
-        // Tell the opponent that we are also here and send the game config
-        ws.current.send(JSON.stringify({ type: 'sync_state', player: me.name, playerId: playerId, mode: gameMode, difficulty: difficulty }));
-      } else if (data.action === 'sync_state' && data.playerId !== playerId) {
-        // Received sync from the host/first player
-        setOpponent({
-          name: data.player,
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
-          level: 45,
-          xp: 2890,
-          color: '#ef4444'
-        });
-        setGameMode(data.mode || 'coding');
-        setDifficulty(data.difficulty || 'easy');
-        if (data.mode === 'coding' && data.difficulty) {
-           setCode(QUESTIONS['coding'][data.difficulty]?.defaultCode || '');
+    const syncRoom = async () => {
+      try {
+        const response = await fetch(`${apiUrl}api/battles/sync/${roomCode}/`);
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        // If opponent joined
+        if (data.status === 'playing' && battleState === 'waiting') {
+           const opponentName = data.host_player_id === playerId ? data.join_player : data.host_player;
+           setOpponent({
+            name: opponentName || 'Opponent',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
+            level: 45,
+            xp: 2890,
+            color: '#ef4444'
+          });
+          setGameMode(data.game_mode || 'coding');
+          setDifficulty(data.difficulty || 'easy');
+          if (data.game_mode === 'coding' && data.difficulty) {
+             setCode(QUESTIONS['coding'][data.difficulty]?.defaultCode || '');
+          }
+          setBattleState('playing');
+        } else if (data.status === 'finished' && battleState === 'playing') {
+          setBattleState('analyzing');
+          setTimeout(() => {
+             setWinner(data.winner);
+             setBattleState('finished');
+          }, 3000);
         }
-        setBattleState('playing');
-      } else if (data.action === 'match_finished') {
-        setBattleState('analyzing');
-        setTimeout(() => {
-           setWinner(data.winner);
-           setBattleState('finished');
-        }, 3000);
+      } catch (error) {
+        console.error('Error syncing room:', error);
       }
     };
+
+    // Poll every 2 seconds
+    pollInterval.current = setInterval(syncRoom, 2000);
+    // Initial sync
+    syncRoom();
 
     return () => {
-      if (ws.current) {
-        ws.current.close();
-        ws.current = null;
+      if (pollInterval.current) {
+        clearInterval(pollInterval.current);
+        pollInterval.current = null;
       }
     };
-  }, [roomCode]); // CRITICAL FIX: Only run when roomCode changes, not on every battleState change!
+  }, [roomCode, battleState]); // Re-evaluate when state changes so we know when to transition
 
   // Timer logic
   useEffect(() => {
@@ -161,36 +122,96 @@ const CodingBattle = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleTimeUp = () => {
-    if (ws.current) {
-      ws.current.send(JSON.stringify({ type: 'submit_code', player: opponent?.name || 'Draw' }));
-    }
+  const handleTimeUp = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
+      await fetch(`${apiUrl}api/battles/submit/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room_code: roomCode, player: opponent?.name || 'Draw' })
+      });
+    } catch (e) {}
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (battleState !== 'playing') return;
-    if (ws.current) {
-      ws.current.send(JSON.stringify({ type: 'submit_code', player: me.name }));
-    }
+    try {
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
+      await fetch(`${apiUrl}api/battles/submit/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room_code: roomCode, player: me.name })
+      });
+    } catch (e) {}
   };
 
   const generateRoomCode = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
-  const handleCreateRoom = (mode) => {
+  const handleCreateRoom = async (mode) => {
     setGameMode(mode);
-    setRoomCode(generateRoomCode());
+    const newRoomCode = generateRoomCode();
+    setRoomCode(newRoomCode);
     if (mode === 'coding') {
        setCode(QUESTIONS['coding'][difficulty].defaultCode);
     }
-    setBattleState('waiting');
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
+      await fetch(`${apiUrl}api/battles/create/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          room_code: newRoomCode, 
+          player: me.name, 
+          playerId: playerId,
+          mode: mode,
+          difficulty: difficulty
+        })
+      });
+      setBattleState('waiting');
+    } catch (error) {
+      console.error('Error creating room', error);
+    }
   };
 
-  const handleJoinRoom = () => {
+  const handleJoinRoom = async () => {
     if (joinCode.length > 0) {
-      setRoomCode(joinCode.toUpperCase());
-      setBattleState('waiting');
+      const code = joinCode.toUpperCase();
+      try {
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
+        const res = await fetch(`${apiUrl}api/battles/join/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            room_code: code, 
+            player: me.name, 
+            playerId: playerId
+          })
+        });
+        if (res.ok) {
+           const data = await res.json();
+           setRoomCode(code);
+           setOpponent({
+            name: data.opponent || 'Opponent',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ef4444',
+            level: 45,
+            xp: 2890,
+            color: '#ef4444'
+          });
+           setGameMode(data.mode || 'coding');
+           setDifficulty(data.difficulty || 'easy');
+           if (data.mode === 'coding' && data.difficulty) {
+              setCode(QUESTIONS['coding'][data.difficulty]?.defaultCode || '');
+           }
+           setBattleState('playing');
+        } else {
+           alert("Room not found or is full!");
+        }
+      } catch (error) {
+        console.error('Error joining room', error);
+      }
     }
   };
 
@@ -338,7 +359,7 @@ const CodingBattle = () => {
 
         <button 
           onClick={() => {
-            if (ws.current) ws.current.close();
+            // if (ws.current) ws.current.close();
             setBattleState('lobby');
           }}
           className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/5"
@@ -447,7 +468,7 @@ const CodingBattle = () => {
                   )}
                   <button 
                     onClick={() => {
-                      if (ws.current) { ws.current.close(); ws.current = null; }
+                      // if (ws.current) { ws.current.close(); ws.current = null; }
                       setBattleState('lobby');
                       setRoomCode('');
                     }}
