@@ -155,7 +155,7 @@ def analyze_career_dna(user_profile):
     if not api_key:
         return {"error": "API Key missing"}
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-flash-latest')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
     # User data prepare karo
     skills = [skill.name for skill in user_profile.skills.all()]
@@ -217,7 +217,7 @@ def analyze_skill_gaps(user_profile, target_role):
     if not api_key:
         return {"error": "API Key missing"}
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-flash-latest')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
     # User ki skills fetch karo
     skills = [skill.name for skill in user_profile.skills.all()]
