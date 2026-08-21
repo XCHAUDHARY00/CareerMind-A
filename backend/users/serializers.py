@@ -77,14 +77,13 @@ class SkillSerializer(serializers.ModelSerializer):
         fields='__all__'
 class EducationSerializer(serializers.ModelSerializer):
     class Meta:
-        model=Education
-        fields='__all__'
-        read_only_fields = ['user_profile']
+        model = Education
+        fields = ['id', 'course', 'institution', 'start_date', 'end_date']
+
 class CareerGoalSerializer(serializers.ModelSerializer):
     class Meta:
-        model=CareerGoal
-        fields='__all__'
-        read_only_fields = ['user_profile']
+        model = CareerGoal
+        fields = ['id', 'title', 'description', 'target_date']
 
 from .models import ChatMessage
 
