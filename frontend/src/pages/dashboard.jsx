@@ -114,13 +114,10 @@ const Dashboard = () => {
         const p = profileRes.data.data;
         setProfileData(p);
 
-        // Show gold streak animation exactly once a day per user on this device if they have a streak
-        const todayStr = new Date().toISOString().split('T')[0];
-        const storageKey = `lastStreakShownDate_${p.id}`;
-        if (p.streak > 0 && localStorage.getItem(storageKey) !== todayStr) {
+        // Use backend's streak_updated flag (authoritative source)
+        if (profileRes.data.streak_updated) {
           setShowStreakAnimation(true);
-          localStorage.setItem(storageKey, todayStr);
-          setTimeout(() => setShowStreakAnimation(false), 3000);
+          setTimeout(() => setShowStreakAnimation(false), 4000);
         }
 
         // Load from cached profile fields if available
@@ -531,14 +528,28 @@ const Dashboard = () => {
       <AnimatePresence>
         {showStreakAnimation && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.8 }}
+            initial={{ opacity: 0, y: 60, scale: 0.7 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.8 }}
-            className="fixed bottom-24 right-6 sm:bottom-10 sm:right-10 z-50 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-600 text-white px-6 py-3 rounded-full font-extrabold shadow-2xl shadow-yellow-500/40 flex items-center gap-3 border border-yellow-300/30"
+            exit={{ opacity: 0, y: 60, scale: 0.7 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="fixed bottom-24 right-6 sm:bottom-10 sm:right-10 z-50 flex flex-col items-center gap-1"
           >
-            <span className="text-2xl animate-bounce">✨</span>
-            <span className="tracking-wide">+1 Daily Login Streak!</span>
-            <span className="text-2xl animate-bounce">🔥</span>
+            {/* Floating fire emoji */}
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+              className="text-5xl"
+            >🔥</motion.div>
+
+            <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-orange-500 text-white px-6 py-3 rounded-2xl font-extrabold shadow-2xl shadow-yellow-500/50 flex items-center gap-3 border border-yellow-300/40" style={{ backdropFilter: 'blur(10px)' }}>
+              <span className="text-2xl">✨</span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-xs font-bold uppercase tracking-widest opacity-80">Daily Login Streak!</span>
+                <span className="text-xl font-black">{realStreak} Day{realStreak !== 1 ? 's' : ''} 🔥</span>
+              </div>
+              <span className="text-2xl">✨</span>
+            </div>
+            <p className="text-xs text-yellow-300/70 font-semibold tracking-wide">Keep it up, {displayName}!</p>
           </motion.div>
         )}
       </AnimatePresence>

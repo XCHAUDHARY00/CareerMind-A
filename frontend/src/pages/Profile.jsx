@@ -89,7 +89,7 @@ const Profile = () => {
       const res = await api.post('/addeducation/', eduForm);
       if (res.data?.data || res.data?.status === 'success') {
         // Refetch fully from database to prevent duplicate display bugs
-        fetchProfile();
+        loadProfile();
         setEduForm({ course: '', institution: '', start_date: '', end_date: '' });
         setIsAddingEdu(false);
       }
@@ -102,7 +102,7 @@ const Profile = () => {
     try {
       await api.delete(`/education/${eduId}/`);
       // Refetch fully from database to prevent state mismatch
-      fetchProfile();
+      loadProfile();
     } catch (err) {
       console.error(err);
     }
