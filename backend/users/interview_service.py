@@ -14,8 +14,8 @@ def get_gemini_model(system_instruction=None):
     genai.configure(api_key=api_key)
     
     if system_instruction:
-        return genai.GenerativeModel('gemini-flash-latest', system_instruction=system_instruction)
-    return genai.GenerativeModel('gemini-flash-latest')
+        return genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_instruction)
+    return genai.GenerativeModel('gemini-1.5-flash')
 
 def clean_json_response(text):
     """

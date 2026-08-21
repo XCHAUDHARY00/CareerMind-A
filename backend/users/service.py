@@ -21,7 +21,7 @@ def generate_career_roadmap(user_profile):
     genai.configure(api_key=api_key)
     
     # 2. Gemini ka kaunsa model use karna hai?
-    model = genai.GenerativeModel('gemini-flash-latest')
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
     # 3. User data ko format karo prompt ke liye
     skills = [skill.name for skill in user_profile.skills.all()]
@@ -118,7 +118,7 @@ def interact_with_career_coach(user_profile, new_message):
     
     # 5. Gemini Model initialize karo with System Instruction
     model = genai.GenerativeModel(
-        'gemini-flash-latest',
+        'gemini-1.5-flash',
         system_instruction=system_instruction
     )
     

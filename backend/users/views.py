@@ -120,7 +120,8 @@ def register(request):
         user = serializer.save()
         try:
             from .email_service import send_welcome_email
-            send_welcome_email(user)
+            import threading
+            threading.Thread(target=send_welcome_email, args=(user,)).start()
         except Exception as e:
             import sys
             print(f"Failed to send welcome email: {e}", file=sys.stderr)

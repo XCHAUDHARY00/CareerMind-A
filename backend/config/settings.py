@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
-
+    'anymail',
 ]
 
 MIDDLEWARE = [
@@ -165,7 +165,7 @@ SIMPLE_JWT = {
 }
 
 # Email Configuration
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'anymail.backends.resend.EmailBackend')
 ANYMAIL = {
     "RESEND_API_KEY": os.getenv("RESEND_API_KEY", ""),
     "SENDGRID_API_KEY": os.getenv("SENDGRID_API_KEY", ""),
