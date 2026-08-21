@@ -1,21 +1,39 @@
 import os
 import json
 from django.utils import timezone
-# pyrefly: ignore [missing-import]
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
-def get_gemini_model(system_instruction=None):
+def get_gemini_client():
     """
-    Helper function to configure and retrieve the Gemini API model.
+    Returns a configured google.genai Client using the new SDK.
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY is missing from environment variables.")
-    genai.configure(api_key=api_key)
+    return genai.Client(api_key=api_key)
+
+
+def get_gemini_response(prompt, system_instruction=None):
+    """
+    Single helper to call Gemini and get a text response.
+    Uses gemini-3.6-flash which is fast and free.
+    """
+    client = get_gemini_client()
     
+    config = None
     if system_instruction:
-        return genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_instruction)
-    return genai.GenerativeModel('gemini-1.5-flash')
+        config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+        )
+    
+    response = client.models.generate_content(
+        model='gemini-3.6-flash',
+        contents=prompt,
+        config=config,
+    )
+    return response.text.strip()
+
 
 def clean_json_response(text):
     """
@@ -30,9 +48,10 @@ def clean_json_response(text):
         text = text[:-3]
     return text.strip()
 
+
 def start_gemini_interview(profile, target_role, difficulty, interview_type):
     """
-    Interacts with Gemini to get the first question based on role, difficulty, and type.
+    Generates the first interview question.
     """
     skills = [skill.name for skill in profile.skills.all()]
     skills_text = ", ".join(skills) if skills else "No skills added yet"
@@ -48,26 +67,24 @@ def start_gemini_interview(profile, target_role, difficulty, interview_type):
         f"- Interview Type: {interview_type}\n\n"
         "Role & Guidelines:\n"
         "1. Ask exactly one single question to start the interview.\n"
-        "2. Do not include any greeting, friendly introduction, or setup commentary like 'Let's begin' or 'Sure, here is your first question'.\n"
+        "2. Do not include any greeting, friendly introduction, or setup commentary.\n"
         "3. Output ONLY the question text itself. No markdown, no quotes, no conversational filler."
     )
     
     try:
-        model = get_gemini_model(system_instruction=system_instruction)
-        prompt = "Generate the very first interview question for the candidate."
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        return get_gemini_response(
+            "Generate the very first interview question for the candidate.",
+            system_instruction=system_instruction
+        )
     except Exception as e:
         print(f"Error starting Gemini interview: {e}")
-        # Quality fallback question
         return f"To start the interview, could you describe a challenging technical project you've worked on recently as a {target_role} and explain how you overcame its main challenges?"
+
 
 def evaluate_and_generate_next(session, last_question, answer_text, next_question_number):
     """
     Evaluates the last answer and generates the next question.
-    If it is the 5th question (next_question_number == 5), it generates a coding question.
     """
-    # Gather session history
     past_questions = session.questions.all().order_by('timestamp')
     history_lines = []
     for q in past_questions:
@@ -111,19 +128,16 @@ Return ONLY a valid JSON object matching the following structure (do not wrap in
 }}
 """
     try:
-        model = get_gemini_model()
-        response = model.generate_content(prompt)
-        cleaned_text = clean_json_response(response.text)
-        result = json.loads(cleaned_text)
+        raw = get_gemini_response(prompt)
+        result = json.loads(clean_json_response(raw))
         return result
     except Exception as e:
         print(f"Error in evaluate_and_generate_next: {e}")
-        # Safe fallback system
         fallback_questions = {
-            2: f"How do you handle database optimizations (like indexing or caching) when designing high-traffic APIs?",
-            3: f"Explain what asynchronous programming is and how it is useful in a web application context.",
-            4: f"Describe how you handle authentication, authorization, and securing REST APIs in production.",
-            5: f"Write a Python function to check if a given binary tree is a valid Binary Search Tree (BST)."
+            2: "How do you handle database optimizations (like indexing or caching) when designing high-traffic APIs?",
+            3: "Explain what asynchronous programming is and how it is useful in a web application context.",
+            4: "Describe how you handle authentication, authorization, and securing REST APIs in production.",
+            5: "Write a Python function to check if a given binary tree is a valid Binary Search Tree (BST).",
         }
         next_q = fallback_questions.get(next_question_number, f"Describe how you handle testing and CI/CD workflows for a {session.target_role} codebase.")
         return {
@@ -133,9 +147,10 @@ Return ONLY a valid JSON object matching the following structure (do not wrap in
             "is_coding": next_question_number == 5
         }
 
+
 def finalize_interview_scores(session):
     """
-    Evaluates all answers from the session, calculates metric scores, and updates the session in the DB.
+    Evaluates all answers, calculates metric scores, and updates the session.
     """
     questions = session.questions.all().order_by('timestamp')
     transcript_lines = []
@@ -159,21 +174,7 @@ Candidate Profile:
 Complete Interview Transcript:
 {transcript_text}
 
-Task:
-Evaluate the candidate's performance across 5 metrics on a scale of 0-100:
-1. Technical Knowledge: Depth of understanding of core role concepts.
-2. Communication: Structure, clarity, and articulation.
-3. Problem Solving: Approach, logical progression, and correctness (especially in the coding question).
-4. Clarity: Precision and absence of rambling.
-5. Confidence: Decisiveness and tone.
-
-Provide:
-- An overall score (average of the above or overall assessment).
-- A concise summary (2-3 sentences summarizing performance).
-- Strengths: A list of 2-3 specific areas where the candidate excelled.
-- Areas to Improve: A list of 2-3 specific topics or skills the candidate should focus on.
-
-Return ONLY a valid JSON object matching the following structure (do not wrap in markdown):
+Evaluate the candidate across 5 metrics (0-100) and return ONLY valid JSON (no markdown):
 {{
     "technical_score": 85,
     "communication_score": 75,
@@ -187,10 +188,8 @@ Return ONLY a valid JSON object matching the following structure (do not wrap in
 }}
 """
     try:
-        model = get_gemini_model()
-        response = model.generate_content(prompt)
-        cleaned_text = clean_json_response(response.text)
-        result = json.loads(cleaned_text)
+        raw = get_gemini_response(prompt)
+        result = json.loads(clean_json_response(raw))
         
         session.technical_score = result.get("technical_score", 70)
         session.communication_score = result.get("communication_score", 70)
@@ -203,13 +202,10 @@ Return ONLY a valid JSON object matching the following structure (do not wrap in
         session.areas_to_improve = result.get("areas_to_improve", [])
     except Exception as e:
         print(f"Error finalizing interview scores: {e}")
-        # Build logical fallback metrics based on answered questions
         q_count = session.questions.all().count()
         answered_qs = session.questions.exclude(user_answer__isnull=True).exclude(user_answer="").exclude(user_answer="[Skipped]")
         answered_count = answered_qs.count()
-        
         base_score = int((answered_count / max(1, q_count)) * 80)
-        
         session.technical_score = max(50, base_score + 10)
         session.communication_score = max(50, base_score + 5)
         session.problem_solving_score = max(50, base_score + 8)
@@ -224,3 +220,20 @@ Return ONLY a valid JSON object matching the following structure (do not wrap in
     session.end_time = timezone.now()
     session.save()
     return session
+
+
+# Keep this for backward compatibility with battles/views.py
+def get_gemini_model(system_instruction=None):
+    """Legacy helper kept for battles/views.py compatibility."""
+    # Returns a simple wrapper object
+    class _ModelWrapper:
+        def __init__(self, sys_inst):
+            self.sys_inst = sys_inst
+        def generate_content(self, prompt):
+            text = get_gemini_response(prompt, system_instruction=self.sys_inst)
+            class _Resp:
+                pass
+            r = _Resp()
+            r.text = text
+            return r
+    return _ModelWrapper(system_instruction)

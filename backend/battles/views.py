@@ -91,8 +91,7 @@ def create_room(request):
     if game_mode == 'quiz':
         # Try AI first, fall back to local bank if Gemini is unavailable
         try:
-            from users.interview_service import get_gemini_model, clean_json_response
-            model = get_gemini_model()
+            from users.interview_service import get_gemini_response, clean_json_response
             import uuid
             prompt = f"""
             Generate exactly 10 UNIQUE multiple choice questions about computer science and programming for difficulty '{difficulty}'.
@@ -104,10 +103,8 @@ def create_room(request):
             - "ans": An integer index (0-3) of the correct option.
             Do not include any other text, just the JSON array.
             """
-            response = model.generate_content(prompt)
-            clean_text = clean_json_response(response.text)
-            quiz_data = json.loads(clean_text)
-            # Validate the structure
+            raw = get_gemini_response(prompt)
+            quiz_data = json.loads(clean_json_response(raw))
             if not isinstance(quiz_data, list) or len(quiz_data) < 5:
                 raise ValueError("Invalid quiz data from AI")
         except Exception as e:
