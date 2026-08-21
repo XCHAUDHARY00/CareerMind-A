@@ -157,6 +157,11 @@ def add_skills(request):
 @permission_classes([IsAuthenticated])
 def add_education(request):
     data = request.data.copy()
+    if data.get('start_date') == "":
+        data['start_date'] = None
+    if data.get('end_date') == "":
+        data['end_date'] = None
+        
     serializer=EducationSerializer(data=data)
     if serializer.is_valid():
         serializer.save(user_profile=request.user.profile)
@@ -241,7 +246,13 @@ def manage_education(request, pk):
         return Response({"status": "success", "message": "Education deleted"}, status=status.HTTP_200_OK)
     
     elif request.method == 'PUT':
-        serializer = EducationSerializer(edu, data=request.data, partial=True)
+        data = request.data.copy()
+        if data.get('start_date') == "":
+            data['start_date'] = None
+        if data.get('end_date') == "":
+            data['end_date'] = None
+            
+        serializer = EducationSerializer(edu, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
